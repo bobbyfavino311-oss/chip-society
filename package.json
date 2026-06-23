@@ -1,11 +1,8 @@
 {
   "name": "chip-society-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
-    "start": "node dist/index.mjs"
-  },
-  "engines": {
-    "node": ">=20"
+    "start": "node --enable-source-maps dist/index.mjs"
   }
 }
