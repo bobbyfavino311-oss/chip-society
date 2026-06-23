@@ -20600,27 +20600,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router4;
+    module.exports = Router5;
     module.exports.Route = Route;
-    function Router4(options) {
-      if (!(this instanceof Router4)) {
-        return new Router4(options);
+    function Router5(options) {
+      if (!(this instanceof Router5)) {
+        return new Router5(options);
       }
       const opts = options || {};
-      function router4(req, res, next) {
-        router4.handle(req, res, next);
+      function router5(req, res, next) {
+        router5.handle(req, res, next);
       }
-      Object.setPrototypeOf(router4, this);
-      router4.caseSensitive = opts.caseSensitive;
-      router4.mergeParams = opts.mergeParams;
-      router4.params = {};
-      router4.strict = opts.strict;
-      router4.stack = [];
-      return router4;
+      Object.setPrototypeOf(router5, this);
+      router5.caseSensitive = opts.caseSensitive;
+      router5.mergeParams = opts.mergeParams;
+      router5.params = {};
+      router5.strict = opts.strict;
+      router5.stack = [];
+      return router5;
     }
-    Router4.prototype = function() {
+    Router5.prototype = function() {
     };
-    Router4.prototype.param = function param(name, fn) {
+    Router5.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20640,7 +20640,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router4.prototype.handle = function handle(req, res, callback) {
+    Router5.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20767,7 +20767,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router4.prototype.use = function use(handler) {
+    Router5.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -20800,7 +20800,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router4.prototype.route = function route(path) {
+    Router5.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20815,7 +20815,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router4.prototype[method] = function(path) {
+      Router5.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20998,13 +20998,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router4 = require_router();
+    var Router5 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router4 = null;
+      var router5 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21013,13 +21013,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router4 === null) {
-            router4 = new Router4({
+          if (router5 === null) {
+            router5 = new Router5({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router4;
+          return router5;
         }
       });
     };
@@ -21090,15 +21090,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router4 = this.router;
+      var router5 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router4.use(path, fn2);
+          return router5.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router4.use(path, function mounted_app(req, res, next) {
+        router5.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23625,7 +23625,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router4 = require_router();
+    var Router5 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23647,8 +23647,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router4.Route;
-    exports.Router = Router4;
+    exports.Route = Router5.Route;
+    exports.Router = Router5;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -54992,12 +54992,12 @@ var require_dist4 = __commonJS({
 import { createServer } from "http";
 
 // src/app.ts
-var import_express4 = __toESM(require_express2(), 1);
+var import_express5 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express3 = __toESM(require_express2(), 1);
+var import_express4 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -65859,6 +65859,8 @@ function drizzle(...params) {
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  chipTransactionsTable: () => chipTransactionsTable,
+  playerReportsTable: () => playerReportsTable,
   playersTable: () => playersTable
 });
 var playersTable = pgTable("players", {
@@ -65868,8 +65870,31 @@ var playersTable = pgTable("players", {
   email: text("email").notNull().default(""),
   pinHash: text("pin_hash").notNull(),
   profileJson: jsonb("profile_json").notNull().$type(),
+  status: text("status").notNull().default("active"),
+  banReason: text("ban_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+var chipTransactionsTable = pgTable("chip_transactions", {
+  txId: text("tx_id").primaryKey(),
+  playerId: text("player_id").notNull().references(() => playersTable.playerId),
+  type: text("type").notNull(),
+  amount: integer("amount").notNull(),
+  balanceAfter: integer("balance_after").notNull(),
+  note: text("note").notNull().default(""),
+  adminId: text("admin_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var playerReportsTable = pgTable("player_reports", {
+  reportId: text("report_id").primaryKey(),
+  reportedId: text("reported_id").notNull().references(() => playersTable.playerId),
+  reporterId: text("reporter_id"),
+  reason: text("reason").notNull(),
+  details: text("details").notNull().default(""),
+  status: text("status").notNull().default("open"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
 // ../../lib/db/src/index.ts
@@ -66041,11 +66066,209 @@ router2.post("/auth/forgot-pin", async (req, res) => {
 });
 var auth_default = router2;
 
-// src/routes/index.ts
+// src/routes/admin.ts
+var import_express3 = __toESM(require_express2(), 1);
+import { randomUUID as randomUUID2 } from "crypto";
 var router3 = (0, import_express3.Router)();
-router3.use(health_default);
-router3.use(auth_default);
-var routes_default = router3;
+function requireAdmin(req, res, next) {
+  const key = req.headers["x-admin-key"];
+  if (!key || key !== process.env["ADMIN_SECRET"]) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
+router3.use("/admin", requireAdmin);
+router3.get("/admin/players", async (req, res) => {
+  try {
+    const q = req.query["q"]?.trim() ?? "";
+    const status = req.query["status"] ?? "all";
+    let rows = await db.select({
+      playerId: playersTable.playerId,
+      username: playersTable.username,
+      email: playersTable.email,
+      status: playersTable.status,
+      banReason: playersTable.banReason,
+      profileJson: playersTable.profileJson,
+      createdAt: playersTable.createdAt,
+      updatedAt: playersTable.updatedAt
+    }).from(playersTable).orderBy(desc(playersTable.createdAt));
+    if (q) {
+      rows = rows.filter(
+        (r) => r.username.toLowerCase().includes(q.toLowerCase()) || r.email.toLowerCase().includes(q.toLowerCase())
+      );
+    }
+    if (status !== "all") {
+      rows = rows.filter((r) => r.status === status);
+    }
+    res.json({ players: rows, total: rows.length });
+  } catch (e) {
+    req.log.error(e, "admin/players list error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/players/:id", async (req, res) => {
+  try {
+    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const txs = await db.select().from(chipTransactionsTable).where(eq(chipTransactionsTable.playerId, req.params["id"])).orderBy(desc(chipTransactionsTable.createdAt)).limit(50);
+    const reports = await db.select().from(playerReportsTable).where(eq(playerReportsTable.reportedId, req.params["id"])).orderBy(desc(playerReportsTable.createdAt));
+    res.json({ player: rows[0], transactions: txs, reports });
+  } catch (e) {
+    req.log.error(e, "admin/player detail error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/chips", async (req, res) => {
+  try {
+    const { type, amount, note } = req.body;
+    if (!type || amount == null || !note) {
+      res.status(400).json({ error: "type, amount, and note are required" });
+      return;
+    }
+    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const player = rows[0];
+    const profile = player.profileJson;
+    const currentChips = typeof profile["chips"] === "number" ? profile["chips"] : 0;
+    const delta = type === "deduction" ? -Math.abs(amount) : Math.abs(amount);
+    const newBalance = Math.max(0, currentChips + delta);
+    const updatedProfile = { ...profile, chips: newBalance };
+    await db.update(playersTable).set({ profileJson: updatedProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, player.playerId));
+    await db.insert(chipTransactionsTable).values({
+      txId: randomUUID2(),
+      playerId: player.playerId,
+      type,
+      amount: delta,
+      balanceAfter: newBalance,
+      note,
+      adminId: "admin"
+    });
+    req.log.info({ playerId: player.playerId, type, amount: delta, newBalance }, "chip adjustment");
+    res.json({ success: true, newBalance });
+  } catch (e) {
+    req.log.error(e, "admin/chips error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/status", async (req, res) => {
+  try {
+    const { status, reason } = req.body;
+    const allowed = ["active", "warned", "suspended", "banned"];
+    if (!allowed.includes(status)) {
+      res.status(400).json({ error: "Invalid status" });
+      return;
+    }
+    await db.update(playersTable).set({ status, banReason: reason ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, req.params["id"]));
+    req.log.info({ playerId: req.params["id"], status }, "player status updated");
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/status error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/reports", async (req, res) => {
+  try {
+    const statusFilter = req.query["status"] ?? "open";
+    let rows = await db.select().from(playerReportsTable).orderBy(desc(playerReportsTable.createdAt));
+    if (statusFilter !== "all") {
+      rows = rows.filter((r) => r.status === statusFilter);
+    }
+    const playerIds = [.../* @__PURE__ */ new Set([
+      ...rows.map((r) => r.reportedId),
+      ...rows.map((r) => r.reporterId).filter(Boolean)
+    ])];
+    const players = playerIds.length > 0 ? await db.select({ playerId: playersTable.playerId, username: playersTable.username }).from(playersTable).where(or(...playerIds.map((id) => eq(playersTable.playerId, id)))) : [];
+    const playerMap = Object.fromEntries(players.map((p) => [p.playerId, p.username]));
+    const enriched = rows.map((r) => ({
+      ...r,
+      reportedUsername: playerMap[r.reportedId] ?? "Unknown",
+      reporterUsername: r.reporterId ? playerMap[r.reporterId] ?? "Unknown" : "Anonymous"
+    }));
+    res.json({ reports: enriched, total: enriched.length });
+  } catch (e) {
+    req.log.error(e, "admin/reports error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.put("/admin/reports/:id", async (req, res) => {
+  try {
+    const { status, resolution } = req.body;
+    await db.update(playerReportsTable).set({ status, resolution: resolution ?? null, resolvedAt: /* @__PURE__ */ new Date() }).where(eq(playerReportsTable.reportId, req.params["id"]));
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/report resolve error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/stats", async (req, res) => {
+  try {
+    const allPlayers = await db.select({
+      status: playersTable.status,
+      createdAt: playersTable.createdAt
+    }).from(playersTable);
+    const allReports = await db.select({
+      status: playerReportsTable.status
+    }).from(playerReportsTable);
+    const now = /* @__PURE__ */ new Date();
+    const dayAgo = new Date(now.getTime() - 864e5);
+    const weekAgo = new Date(now.getTime() - 7 * 864e5);
+    res.json({
+      players: {
+        total: allPlayers.length,
+        active: allPlayers.filter((p) => p.status === "active").length,
+        banned: allPlayers.filter((p) => p.status === "banned").length,
+        suspended: allPlayers.filter((p) => p.status === "suspended").length,
+        warned: allPlayers.filter((p) => p.status === "warned").length,
+        newToday: allPlayers.filter((p) => p.createdAt && p.createdAt > dayAgo).length,
+        newWeek: allPlayers.filter((p) => p.createdAt && p.createdAt > weekAgo).length
+      },
+      reports: {
+        total: allReports.length,
+        open: allReports.filter((r) => r.status === "open").length,
+        resolved: allReports.filter((r) => r.status === "resolved").length,
+        dismissed: allReports.filter((r) => r.status === "dismissed").length
+      }
+    });
+  } catch (e) {
+    req.log.error(e, "admin/stats error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/players/:id/report", async (req, res) => {
+  try {
+    const { reporterId, reason, details } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    await db.insert(playerReportsTable).values({
+      reportId: randomUUID2(),
+      reportedId: req.params["id"],
+      reporterId: reporterId ?? null,
+      reason,
+      details: details ?? ""
+    });
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "report player error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+var admin_default = router3;
+
+// src/routes/index.ts
+var router4 = (0, import_express4.Router)();
+router4.use(health_default);
+router4.use(auth_default);
+router4.use(admin_default);
+var routes_default = router4;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -66066,7 +66289,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express4.default)();
+var app = (0, import_express5.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -66087,8 +66310,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express4.default.json());
-app.use(import_express4.default.urlencoded({ extended: true }));
+app.use(import_express5.default.json());
+app.use(import_express5.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 
