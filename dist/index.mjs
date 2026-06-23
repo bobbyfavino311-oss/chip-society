@@ -65860,6 +65860,7 @@ function drizzle(...params) {
 var schema_exports = {};
 __export(schema_exports, {
   chipTransactionsTable: () => chipTransactionsTable,
+  playerNotificationsTable: () => playerNotificationsTable,
   playerReportsTable: () => playerReportsTable,
   playersTable: () => playersTable
 });
@@ -65894,6 +65895,17 @@ var playerReportsTable = pgTable("player_reports", {
   status: text("status").notNull().default("open"),
   resolution: text("resolution"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var playerNotificationsTable = pgTable("player_notifications", {
+  notificationId: text("notification_id").primaryKey(),
+  playerId: text("player_id").notNull().references(() => playersTable.playerId),
+  type: text("type").notNull().default("bonus"),
+  title: text("title").notNull(),
+  amount: integer("amount").notNull().default(0),
+  message: text("message"),
+  reason: text("reason").notNull().default(""),
+  read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
@@ -66069,251 +66081,6 @@ var auth_default = router2;
 // src/routes/admin.ts
 var import_express3 = __toESM(require_express2(), 1);
 import { randomUUID as randomUUID2 } from "crypto";
-var router3 = (0, import_express3.Router)();
-function requireAdmin(req, res, next) {
-  const key = req.headers["x-admin-key"];
-  if (!key || key !== process.env["ADMIN_SECRET"]) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  next();
-}
-router3.use("/admin", requireAdmin);
-router3.get("/admin/players", async (req, res) => {
-  try {
-    const q = req.query["q"]?.trim() ?? "";
-    const status = req.query["status"] ?? "all";
-    let rows = await db.select({
-      playerId: playersTable.playerId,
-      username: playersTable.username,
-      email: playersTable.email,
-      status: playersTable.status,
-      banReason: playersTable.banReason,
-      profileJson: playersTable.profileJson,
-      createdAt: playersTable.createdAt,
-      updatedAt: playersTable.updatedAt
-    }).from(playersTable).orderBy(desc(playersTable.createdAt));
-    if (q) {
-      rows = rows.filter(
-        (r) => r.username.toLowerCase().includes(q.toLowerCase()) || r.email.toLowerCase().includes(q.toLowerCase())
-      );
-    }
-    if (status !== "all") {
-      rows = rows.filter((r) => r.status === status);
-    }
-    res.json({ players: rows, total: rows.length });
-  } catch (e) {
-    req.log.error(e, "admin/players list error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.get("/admin/players/:id", async (req, res) => {
-  try {
-    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
-    if (!rows.length) {
-      res.status(404).json({ error: "Player not found" });
-      return;
-    }
-    const txs = await db.select().from(chipTransactionsTable).where(eq(chipTransactionsTable.playerId, req.params["id"])).orderBy(desc(chipTransactionsTable.createdAt)).limit(50);
-    const reports = await db.select().from(playerReportsTable).where(eq(playerReportsTable.reportedId, req.params["id"])).orderBy(desc(playerReportsTable.createdAt));
-    res.json({ player: rows[0], transactions: txs, reports });
-  } catch (e) {
-    req.log.error(e, "admin/player detail error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.post("/admin/players/:id/chips", async (req, res) => {
-  try {
-    const { type, amount, note } = req.body;
-    if (!type || amount == null || !note) {
-      res.status(400).json({ error: "type, amount, and note are required" });
-      return;
-    }
-    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
-    if (!rows.length) {
-      res.status(404).json({ error: "Player not found" });
-      return;
-    }
-    const player = rows[0];
-    const profile = player.profileJson;
-    const currentChips = typeof profile["chips"] === "number" ? profile["chips"] : 0;
-    const delta = type === "deduction" ? -Math.abs(amount) : Math.abs(amount);
-    const newBalance = Math.max(0, currentChips + delta);
-    const updatedProfile = { ...profile, chips: newBalance };
-    await db.update(playersTable).set({ profileJson: updatedProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, player.playerId));
-    await db.insert(chipTransactionsTable).values({
-      txId: randomUUID2(),
-      playerId: player.playerId,
-      type,
-      amount: delta,
-      balanceAfter: newBalance,
-      note,
-      adminId: "admin"
-    });
-    req.log.info({ playerId: player.playerId, type, amount: delta, newBalance }, "chip adjustment");
-    res.json({ success: true, newBalance });
-  } catch (e) {
-    req.log.error(e, "admin/chips error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.post("/admin/players/:id/status", async (req, res) => {
-  try {
-    const { status, reason } = req.body;
-    const allowed = ["active", "warned", "suspended", "banned"];
-    if (!allowed.includes(status)) {
-      res.status(400).json({ error: "Invalid status" });
-      return;
-    }
-    await db.update(playersTable).set({ status, banReason: reason ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, req.params["id"]));
-    req.log.info({ playerId: req.params["id"], status }, "player status updated");
-    res.json({ success: true });
-  } catch (e) {
-    req.log.error(e, "admin/status error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.get("/admin/reports", async (req, res) => {
-  try {
-    const statusFilter = req.query["status"] ?? "open";
-    let rows = await db.select().from(playerReportsTable).orderBy(desc(playerReportsTable.createdAt));
-    if (statusFilter !== "all") {
-      rows = rows.filter((r) => r.status === statusFilter);
-    }
-    const playerIds = [.../* @__PURE__ */ new Set([
-      ...rows.map((r) => r.reportedId),
-      ...rows.map((r) => r.reporterId).filter(Boolean)
-    ])];
-    const players = playerIds.length > 0 ? await db.select({ playerId: playersTable.playerId, username: playersTable.username }).from(playersTable).where(or(...playerIds.map((id) => eq(playersTable.playerId, id)))) : [];
-    const playerMap = Object.fromEntries(players.map((p) => [p.playerId, p.username]));
-    const enriched = rows.map((r) => ({
-      ...r,
-      reportedUsername: playerMap[r.reportedId] ?? "Unknown",
-      reporterUsername: r.reporterId ? playerMap[r.reporterId] ?? "Unknown" : "Anonymous"
-    }));
-    res.json({ reports: enriched, total: enriched.length });
-  } catch (e) {
-    req.log.error(e, "admin/reports error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.put("/admin/reports/:id", async (req, res) => {
-  try {
-    const { status, resolution } = req.body;
-    await db.update(playerReportsTable).set({ status, resolution: resolution ?? null, resolvedAt: /* @__PURE__ */ new Date() }).where(eq(playerReportsTable.reportId, req.params["id"]));
-    res.json({ success: true });
-  } catch (e) {
-    req.log.error(e, "admin/report resolve error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.get("/admin/stats", async (req, res) => {
-  try {
-    const allPlayers = await db.select({
-      status: playersTable.status,
-      createdAt: playersTable.createdAt
-    }).from(playersTable);
-    const allReports = await db.select({
-      status: playerReportsTable.status
-    }).from(playerReportsTable);
-    const now = /* @__PURE__ */ new Date();
-    const dayAgo = new Date(now.getTime() - 864e5);
-    const weekAgo = new Date(now.getTime() - 7 * 864e5);
-    res.json({
-      players: {
-        total: allPlayers.length,
-        active: allPlayers.filter((p) => p.status === "active").length,
-        banned: allPlayers.filter((p) => p.status === "banned").length,
-        suspended: allPlayers.filter((p) => p.status === "suspended").length,
-        warned: allPlayers.filter((p) => p.status === "warned").length,
-        newToday: allPlayers.filter((p) => p.createdAt && p.createdAt > dayAgo).length,
-        newWeek: allPlayers.filter((p) => p.createdAt && p.createdAt > weekAgo).length
-      },
-      reports: {
-        total: allReports.length,
-        open: allReports.filter((r) => r.status === "open").length,
-        resolved: allReports.filter((r) => r.status === "resolved").length,
-        dismissed: allReports.filter((r) => r.status === "dismissed").length
-      }
-    });
-  } catch (e) {
-    req.log.error(e, "admin/stats error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-router3.post("/players/:id/report", async (req, res) => {
-  try {
-    const { reporterId, reason, details } = req.body;
-    if (!reason) {
-      res.status(400).json({ error: "reason is required" });
-      return;
-    }
-    await db.insert(playerReportsTable).values({
-      reportId: randomUUID2(),
-      reportedId: req.params["id"],
-      reporterId: reporterId ?? null,
-      reason,
-      details: details ?? ""
-    });
-    res.json({ success: true });
-  } catch (e) {
-    req.log.error(e, "report player error");
-    res.status(500).json({ error: "Server error" });
-  }
-});
-var admin_default = router3;
-
-// src/routes/index.ts
-var router4 = (0, import_express4.Router)();
-router4.use(health_default);
-router4.use(auth_default);
-router4.use(admin_default);
-var routes_default = router4;
-
-// src/lib/logger.ts
-var import_pino = __toESM(require_pino(), 1);
-var isProduction = process.env.NODE_ENV === "production";
-var logger = (0, import_pino.default)({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
-  }
-});
-
-// src/app.ts
-var app = (0, import_express5.default)();
-app.use(
-  (0, import_pino_http.default)({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0]
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode
-        };
-      }
-    }
-  })
-);
-app.use((0, import_cors.default)());
-app.use(import_express5.default.json());
-app.use(import_express5.default.urlencoded({ extended: true }));
-app.use("/api", routes_default);
-var app_default = app;
 
 // ../../node_modules/.pnpm/socket.io@4.8.3/node_modules/socket.io/wrapper.mjs
 var import_dist = __toESM(require_dist4(), 1);
@@ -66965,13 +66732,45 @@ var RoomManager = class {
   }
 };
 
+// src/lib/logger.ts
+var import_pino = __toESM(require_pino(), 1);
+var isProduction = process.env.NODE_ENV === "production";
+var logger = (0, import_pino.default)({
+  level: process.env.LOG_LEVEL ?? "info",
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']"
+  ],
+  ...isProduction ? {} : {
+    transport: {
+      target: "pino-pretty",
+      options: { colorize: true }
+    }
+  }
+});
+
 // src/sockets/index.ts
+var playerSockets = /* @__PURE__ */ new Map();
+var socketPlayers = /* @__PURE__ */ new Map();
+var _io = null;
+function emitToPlayer(playerId, event, data) {
+  const socketId = playerSockets.get(playerId);
+  if (!socketId || !_io) {
+    logger.info({ playerId, event, socketFound: false }, "emitToPlayer: player offline or server not ready");
+    return false;
+  }
+  _io.to(socketId).emit(event, data);
+  logger.info({ playerId, socketId, event, socketFound: true }, "emitToPlayer: event emitted");
+  return true;
+}
 function setupSocketIO(httpServer2) {
   const io2 = new Server(httpServer2, {
     path: "/api/socket.io",
     cors: { origin: "*", methods: ["GET", "POST"] },
     transports: ["websocket", "polling"]
   });
+  _io = io2;
   const emit = (socketId, event, data) => {
     io2.to(socketId).emit(event, data);
   };
@@ -66982,6 +66781,18 @@ function setupSocketIO(httpServer2) {
   const manager = new RoomManager(emit, broadcast);
   io2.on("connection", (socket) => {
     logger.info({ socketId: socket.id }, "Socket connected");
+    socket.on("register_player", (payload) => {
+      const { playerId } = payload;
+      if (!playerId) return;
+      const oldSocketId = playerSockets.get(playerId);
+      if (oldSocketId && oldSocketId !== socket.id) {
+        socketPlayers.delete(oldSocketId);
+      }
+      playerSockets.set(playerId, socket.id);
+      socketPlayers.set(socket.id, playerId);
+      socket.join(`player:${playerId}`);
+      logger.info({ playerId, socketId: socket.id, username: payload.username ?? "unknown" }, "Player registered for push notifications");
+    });
     socket.on("get_lobby", () => {
       socket.emit("lobby_state", { tables: manager.getLobbyTables() });
     });
@@ -67047,6 +66858,12 @@ function setupSocketIO(httpServer2) {
     });
     socket.on("disconnect", () => {
       logger.info({ socketId: socket.id }, "Socket disconnected");
+      const pid = socketPlayers.get(socket.id);
+      if (pid) {
+        playerSockets.delete(pid);
+        socketPlayers.delete(socket.id);
+        logger.info({ playerId: pid, socketId: socket.id }, "Player presence removed on disconnect");
+      }
       const room = manager.getRoomForSocket(socket.id);
       if (room) socket.leave(room.id);
       manager.leaveRoom(socket.id);
@@ -67055,6 +66872,322 @@ function setupSocketIO(httpServer2) {
   });
   logger.info("Socket.IO attached at /api/socket.io");
 }
+
+// src/routes/admin.ts
+var router3 = (0, import_express3.Router)();
+function requireAdmin(req, res, next) {
+  const key = req.headers["x-admin-key"];
+  if (!key || key !== process.env["ADMIN_SECRET"]) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
+router3.use("/admin", requireAdmin);
+router3.get("/admin/players", async (req, res) => {
+  try {
+    const q = req.query["q"]?.trim() ?? "";
+    const status = req.query["status"] ?? "all";
+    let rows = await db.select({
+      playerId: playersTable.playerId,
+      username: playersTable.username,
+      email: playersTable.email,
+      status: playersTable.status,
+      banReason: playersTable.banReason,
+      profileJson: playersTable.profileJson,
+      createdAt: playersTable.createdAt,
+      updatedAt: playersTable.updatedAt
+    }).from(playersTable).orderBy(desc(playersTable.createdAt));
+    if (q) {
+      rows = rows.filter(
+        (r) => r.username.toLowerCase().includes(q.toLowerCase()) || r.email.toLowerCase().includes(q.toLowerCase())
+      );
+    }
+    if (status !== "all") {
+      rows = rows.filter((r) => r.status === status);
+    }
+    res.json({ players: rows, total: rows.length });
+  } catch (e) {
+    req.log.error(e, "admin/players list error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/players/:id", async (req, res) => {
+  try {
+    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const txs = await db.select().from(chipTransactionsTable).where(eq(chipTransactionsTable.playerId, req.params["id"])).orderBy(desc(chipTransactionsTable.createdAt)).limit(50);
+    const reports = await db.select().from(playerReportsTable).where(eq(playerReportsTable.reportedId, req.params["id"])).orderBy(desc(playerReportsTable.createdAt));
+    res.json({ player: rows[0], transactions: txs, reports });
+  } catch (e) {
+    req.log.error(e, "admin/player detail error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/chips", async (req, res) => {
+  try {
+    const { type, amount, note } = req.body;
+    if (!type || amount == null || !note) {
+      res.status(400).json({ error: "type, amount, and note are required" });
+      return;
+    }
+    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const player = rows[0];
+    const profile = player.profileJson;
+    const currentChips = typeof profile["chips"] === "number" ? profile["chips"] : 0;
+    const delta = type === "deduction" ? -Math.abs(amount) : Math.abs(amount);
+    const newBalance = Math.max(0, currentChips + delta);
+    const updatedProfile = { ...profile, chips: newBalance };
+    await db.update(playersTable).set({ profileJson: updatedProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, player.playerId));
+    await db.insert(chipTransactionsTable).values({
+      txId: randomUUID2(),
+      playerId: player.playerId,
+      type,
+      amount: delta,
+      balanceAfter: newBalance,
+      note,
+      adminId: "admin"
+    });
+    req.log.info({ playerId: player.playerId, type, amount: delta, newBalance }, "chip adjustment");
+    res.json({ success: true, newBalance });
+  } catch (e) {
+    req.log.error(e, "admin/chips error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/bonus", async (req, res) => {
+  try {
+    const { amount, reason, message } = req.body;
+    if (!amount || amount <= 0) {
+      res.status(400).json({ error: "amount must be a positive number" });
+      return;
+    }
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    const rows = await db.select().from(playersTable).where(eq(playersTable.playerId, req.params["id"])).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const player = rows[0];
+    const profile = player.profileJson;
+    const currentChips = typeof profile["chips"] === "number" ? profile["chips"] : 0;
+    const newBalance = currentChips + Math.abs(amount);
+    const updatedProfile = { ...profile, chips: newBalance };
+    await db.update(playersTable).set({ profileJson: updatedProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, player.playerId));
+    const txId = randomUUID2();
+    await db.insert(chipTransactionsTable).values({
+      txId,
+      playerId: player.playerId,
+      type: "bonus",
+      amount: Math.abs(amount),
+      balanceAfter: newBalance,
+      note: `${reason}${message ? ` \u2014 ${message}` : ""}`,
+      adminId: "admin"
+    });
+    const notificationId = randomUUID2();
+    await db.insert(playerNotificationsTable).values({
+      notificationId,
+      playerId: player.playerId,
+      type: "bonus",
+      title: reason,
+      amount: Math.abs(amount),
+      message: message ?? null,
+      reason,
+      read: false
+    });
+    const online = emitToPlayer(player.playerId, "casino_bonus_received", {
+      playerId: player.playerId,
+      username: player.username,
+      amount: Math.abs(amount),
+      message: message ?? null,
+      reason,
+      previousBalance: currentChips,
+      newBalance,
+      transactionId: txId,
+      notificationId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    req.log.info({ playerId: player.playerId, amount, reason, notificationId, playerOnline: online }, "casino bonus awarded");
+    res.json({ success: true, newBalance, notificationId, txId, playerOnline: online });
+  } catch (e) {
+    req.log.error(e, "admin/bonus error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/status", async (req, res) => {
+  try {
+    const { status, reason } = req.body;
+    const allowed = ["active", "warned", "suspended", "banned"];
+    if (!allowed.includes(status)) {
+      res.status(400).json({ error: "Invalid status" });
+      return;
+    }
+    await db.update(playersTable).set({ status, banReason: reason ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, req.params["id"]));
+    req.log.info({ playerId: req.params["id"], status }, "player status updated");
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/status error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/reports", async (req, res) => {
+  try {
+    const statusFilter = req.query["status"] ?? "open";
+    let rows = await db.select().from(playerReportsTable).orderBy(desc(playerReportsTable.createdAt));
+    if (statusFilter !== "all") {
+      rows = rows.filter((r) => r.status === statusFilter);
+    }
+    const playerIds = [.../* @__PURE__ */ new Set([
+      ...rows.map((r) => r.reportedId),
+      ...rows.map((r) => r.reporterId).filter(Boolean)
+    ])];
+    const players = playerIds.length > 0 ? await db.select({ playerId: playersTable.playerId, username: playersTable.username }).from(playersTable).where(or(...playerIds.map((id) => eq(playersTable.playerId, id)))) : [];
+    const playerMap = Object.fromEntries(players.map((p) => [p.playerId, p.username]));
+    const enriched = rows.map((r) => ({
+      ...r,
+      reportedUsername: playerMap[r.reportedId] ?? "Unknown",
+      reporterUsername: r.reporterId ? playerMap[r.reporterId] ?? "Unknown" : "Anonymous"
+    }));
+    res.json({ reports: enriched, total: enriched.length });
+  } catch (e) {
+    req.log.error(e, "admin/reports error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.put("/admin/reports/:id", async (req, res) => {
+  try {
+    const { status, resolution } = req.body;
+    await db.update(playerReportsTable).set({ status, resolution: resolution ?? null, resolvedAt: /* @__PURE__ */ new Date() }).where(eq(playerReportsTable.reportId, req.params["id"]));
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/report resolve error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/stats", async (req, res) => {
+  try {
+    const allPlayers = await db.select({
+      status: playersTable.status,
+      createdAt: playersTable.createdAt
+    }).from(playersTable);
+    const allReports = await db.select({
+      status: playerReportsTable.status
+    }).from(playerReportsTable);
+    const now = /* @__PURE__ */ new Date();
+    const dayAgo = new Date(now.getTime() - 864e5);
+    const weekAgo = new Date(now.getTime() - 7 * 864e5);
+    res.json({
+      players: {
+        total: allPlayers.length,
+        active: allPlayers.filter((p) => p.status === "active").length,
+        banned: allPlayers.filter((p) => p.status === "banned").length,
+        suspended: allPlayers.filter((p) => p.status === "suspended").length,
+        warned: allPlayers.filter((p) => p.status === "warned").length,
+        newToday: allPlayers.filter((p) => p.createdAt && p.createdAt > dayAgo).length,
+        newWeek: allPlayers.filter((p) => p.createdAt && p.createdAt > weekAgo).length
+      },
+      reports: {
+        total: allReports.length,
+        open: allReports.filter((r) => r.status === "open").length,
+        resolved: allReports.filter((r) => r.status === "resolved").length,
+        dismissed: allReports.filter((r) => r.status === "dismissed").length
+      }
+    });
+  } catch (e) {
+    req.log.error(e, "admin/stats error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/players/:id/report", async (req, res) => {
+  try {
+    const { reporterId, reason, details } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    await db.insert(playerReportsTable).values({
+      reportId: randomUUID2(),
+      reportedId: req.params["id"],
+      reporterId: reporterId ?? null,
+      reason,
+      details: details ?? ""
+    });
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "report player error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/players/:id/notifications", async (req, res) => {
+  try {
+    const rows = await db.select().from(playerNotificationsTable).where(eq(playerNotificationsTable.playerId, req.params["id"])).orderBy(desc(playerNotificationsTable.createdAt)).limit(20);
+    res.json({ notifications: rows });
+  } catch (e) {
+    req.log.error(e, "player notifications error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/players/:id/notifications/read", async (req, res) => {
+  try {
+    const { notificationIds } = req.body;
+    if (!Array.isArray(notificationIds) || !notificationIds.length) {
+      res.status(400).json({ error: "notificationIds array is required" });
+      return;
+    }
+    for (const nid of notificationIds) {
+      await db.update(playerNotificationsTable).set({ read: true }).where(eq(playerNotificationsTable.notificationId, nid));
+    }
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "mark notification read error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+var admin_default = router3;
+
+// src/routes/index.ts
+var router4 = (0, import_express4.Router)();
+router4.use(health_default);
+router4.use(auth_default);
+router4.use(admin_default);
+var routes_default = router4;
+
+// src/app.ts
+var app = (0, import_express5.default)();
+app.use(
+  (0, import_pino_http.default)({
+    logger,
+    serializers: {
+      req(req) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url?.split("?")[0]
+        };
+      },
+      res(res) {
+        return {
+          statusCode: res.statusCode
+        };
+      }
+    }
+  })
+);
+app.use((0, import_cors.default)());
+app.use(import_express5.default.json());
+app.use(import_express5.default.urlencoded({ extended: true }));
+app.use("/api", routes_default);
+var app_default = app;
 
 // src/index.ts
 var rawPort = process.env["PORT"];
@@ -67066,14 +67199,63 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 logger.info({ domains: process.env["REPLIT_DOMAINS"] ?? "unset" }, "Production domains");
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chip_transactions (
+        tx_id            TEXT PRIMARY KEY,
+        player_id        TEXT NOT NULL REFERENCES players(player_id),
+        type             TEXT NOT NULL,
+        amount           INTEGER NOT NULL,
+        balance_after    INTEGER NOT NULL DEFAULT 0,
+        note             TEXT NOT NULL DEFAULT '',
+        admin_id         TEXT,
+        created_at       TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS player_reports (
+        report_id    TEXT PRIMARY KEY,
+        reported_id  TEXT NOT NULL REFERENCES players(player_id),
+        reporter_id  TEXT,
+        reason       TEXT NOT NULL,
+        details      TEXT NOT NULL DEFAULT '',
+        status       TEXT NOT NULL DEFAULT 'open',
+        resolution   TEXT,
+        resolved_at  TIMESTAMPTZ,
+        created_at   TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS player_notifications (
+        notification_id  TEXT PRIMARY KEY,
+        player_id        TEXT NOT NULL REFERENCES players(player_id),
+        type             TEXT NOT NULL DEFAULT 'bonus',
+        title            TEXT NOT NULL,
+        amount           INTEGER NOT NULL DEFAULT 0,
+        message          TEXT,
+        reason           TEXT NOT NULL DEFAULT '',
+        read             BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at       TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    logger.info("Startup migrations complete");
+  } catch (err) {
+    logger.error({ err }, "Startup migration failed \u2014 continuing anyway");
+  } finally {
+    client.release();
+  }
+}
 var httpServer = createServer(app_default);
 setupSocketIO(httpServer);
 httpServer.on("error", (err) => {
   logger.error({ err }, "HTTP server error");
   process.exit(1);
 });
-httpServer.listen(port, () => {
+httpServer.listen(port, async () => {
   logger.info({ port }, "Server listening");
+  await runMigrations();
 });
 /*! Bundled license information:
 
