@@ -67385,6 +67385,34 @@ router4.get("/social/search", async (req, res) => {
     res.status(500).json({ error: "Search failed" });
   }
 });
+router4.get("/social/players/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await db.select({ playerId: playersTable.playerId, username: playersTable.username, profileJson: playersTable.profileJson, status: playersTable.status }).from(playersTable).where(eq(playersTable.playerId, id)).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const r = rows[0];
+    const pj = r.profileJson;
+    res.json({
+      player: {
+        playerId: r.playerId,
+        username: r.username,
+        level: pj?.level ?? 1,
+        chips: pj?.chips ?? 0,
+        avatarIndex: pj?.avatarIndex ?? 1,
+        rank: pj?.rank ?? "Neon Bronze",
+        winRate: pj?.winRate ?? 0,
+        handsPlayed: pj?.handsPlayed ?? 0,
+        status: r.status
+      }
+    });
+  } catch (e) {
+    req.log.error(e, "social player profile error");
+    res.status(500).json({ error: "Failed" });
+  }
+});
 router4.post("/social/follow/:targetId", requirePlayer, async (req, res) => {
   try {
     const { playerId } = req;
