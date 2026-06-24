@@ -20600,27 +20600,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router5;
+    module.exports = Router6;
     module.exports.Route = Route;
-    function Router5(options) {
-      if (!(this instanceof Router5)) {
-        return new Router5(options);
+    function Router6(options) {
+      if (!(this instanceof Router6)) {
+        return new Router6(options);
       }
       const opts = options || {};
-      function router5(req, res, next) {
-        router5.handle(req, res, next);
+      function router6(req, res, next) {
+        router6.handle(req, res, next);
       }
-      Object.setPrototypeOf(router5, this);
-      router5.caseSensitive = opts.caseSensitive;
-      router5.mergeParams = opts.mergeParams;
-      router5.params = {};
-      router5.strict = opts.strict;
-      router5.stack = [];
-      return router5;
+      Object.setPrototypeOf(router6, this);
+      router6.caseSensitive = opts.caseSensitive;
+      router6.mergeParams = opts.mergeParams;
+      router6.params = {};
+      router6.strict = opts.strict;
+      router6.stack = [];
+      return router6;
     }
-    Router5.prototype = function() {
+    Router6.prototype = function() {
     };
-    Router5.prototype.param = function param(name, fn) {
+    Router6.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20640,7 +20640,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router5.prototype.handle = function handle(req, res, callback) {
+    Router6.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20767,7 +20767,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router5.prototype.use = function use(handler) {
+    Router6.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -20800,7 +20800,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router5.prototype.route = function route(path) {
+    Router6.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20815,7 +20815,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router5.prototype[method] = function(path) {
+      Router6.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20998,13 +20998,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router5 = require_router();
+    var Router6 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router5 = null;
+      var router6 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21013,13 +21013,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router5 === null) {
-            router5 = new Router5({
+          if (router6 === null) {
+            router6 = new Router6({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router5;
+          return router6;
         }
       });
     };
@@ -21090,15 +21090,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router5 = this.router;
+      var router6 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router5.use(path, fn2);
+          return router6.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router5.use(path, function mounted_app(req, res, next) {
+        router6.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23625,7 +23625,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router5 = require_router();
+    var Router6 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23647,8 +23647,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router5.Route;
-    exports.Router = Router5;
+    exports.Route = Router6.Route;
+    exports.Router = Router6;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -54992,12 +54992,12 @@ var require_dist4 = __commonJS({
 import { createServer } from "http";
 
 // src/app.ts
-var import_express5 = __toESM(require_express2(), 1);
+var import_express6 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express4 = __toESM(require_express2(), 1);
+var import_express5 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -61826,6 +61826,12 @@ var pgTable = (name, columns, extraConfig) => {
 };
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/primary-keys.js
+function primaryKey(...config) {
+  if (config[0].columns) {
+    return new PrimaryKeyBuilder(config[0].columns, config[0].name);
+  }
+  return new PrimaryKeyBuilder(config);
+}
 var PrimaryKeyBuilder = class {
   static [entityKind] = "PgPrimaryKeyBuilder";
   /** @internal */
@@ -62184,19 +62190,19 @@ function extractTablesRelationalConfig(schema, configHelpers) {
       const relations2 = value.config(
         configHelpers(value.table)
       );
-      let primaryKey;
+      let primaryKey2;
       for (const [relationName, relation] of Object.entries(relations2)) {
         if (tableName) {
           const tableConfig = tablesConfig[tableName];
           tableConfig.relations[relationName] = relation;
-          if (primaryKey) {
-            tableConfig.primaryKey.push(...primaryKey);
+          if (primaryKey2) {
+            tableConfig.primaryKey.push(...primaryKey2);
           }
         } else {
           if (!(dbName in relationsBuffer)) {
             relationsBuffer[dbName] = {
               relations: {},
-              primaryKey
+              primaryKey: primaryKey2
             };
           }
           relationsBuffer[dbName].relations[relationName] = relation;
@@ -65859,7 +65865,11 @@ function drizzle(...params) {
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  blocksTable: () => blocksTable,
   chipTransactionsTable: () => chipTransactionsTable,
+  conversationsTable: () => conversationsTable,
+  directMessagesTable: () => directMessagesTable,
+  followsTable: () => followsTable,
   moderationActionsTable: () => moderationActionsTable,
   playerNotificationsTable: () => playerNotificationsTable,
   playerReportsTable: () => playerReportsTable,
@@ -65922,6 +65932,34 @@ var moderationActionsTable = pgTable("moderation_actions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
+var followsTable = pgTable("follows", {
+  followerId: text("follower_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  followingId: text("following_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+}, (t) => [primaryKey({ columns: [t.followerId, t.followingId] })]);
+var conversationsTable = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  p1Id: text("p1_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  p2Id: text("p2_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  lastPreview: text("last_preview").notNull().default(""),
+  lastAt: timestamp("last_at", { withTimezone: true }).defaultNow(),
+  unread1: integer("unread1").notNull().default(0),
+  unread2: integer("unread2").notNull().default(0)
+});
+var directMessagesTable = pgTable("direct_messages", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id").notNull().references(() => conversationsTable.id, { onDelete: "cascade" }),
+  senderId: text("sender_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  isReported: boolean("is_reported").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var blocksTable = pgTable("blocks", {
+  blockerId: text("blocker_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  blockedId: text("blocked_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+}, (t) => [primaryKey({ columns: [t.blockerId, t.blockedId] })]);
 
 // ../../lib/db/src/index.ts
 var { Pool: Pool3 } = esm_default;
@@ -67292,15 +67330,304 @@ router3.post("/players/:id/notifications/read", async (req, res) => {
 });
 var admin_default = router3;
 
-// src/routes/index.ts
+// src/routes/social.ts
+var import_express4 = __toESM(require_express2(), 1);
+import { randomUUID as randomUUID3 } from "crypto";
 var router4 = (0, import_express4.Router)();
-router4.use(health_default);
-router4.use(auth_default);
-router4.use(admin_default);
-var routes_default = router4;
+function requirePlayer(req, res, next) {
+  const pid = req.headers["x-player-id"];
+  if (!pid) {
+    res.status(401).json({ error: "x-player-id header required" });
+    return;
+  }
+  req.playerId = pid;
+  next();
+}
+var messageTimes = /* @__PURE__ */ new Map();
+function checkMessageRate(playerId) {
+  const now = Date.now();
+  const times = (messageTimes.get(playerId) ?? []).filter((t) => now - t < 1e4);
+  if (times.length >= 5) return false;
+  times.push(now);
+  messageTimes.set(playerId, times);
+  return true;
+}
+router4.get("/social/search", async (req, res) => {
+  try {
+    const q = (req.query["q"] ?? "").trim();
+    if (!q || q.length < 2) {
+      res.json({ players: [] });
+      return;
+    }
+    const rows = await db.select({
+      playerId: playersTable.playerId,
+      username: playersTable.username,
+      profileJson: playersTable.profileJson,
+      status: playersTable.status
+    }).from(playersTable).where(
+      and(
+        ilike(playersTable.username, `%${q}%`),
+        ne(playersTable.status, "banned")
+      )
+    ).limit(20);
+    const players = rows.map((r) => ({
+      playerId: r.playerId,
+      username: r.username,
+      level: r.profileJson?.level ?? 1,
+      chips: r.profileJson?.chips ?? 0,
+      avatarIndex: r.profileJson?.avatarIndex ?? 1,
+      rank: r.profileJson?.rank ?? "Neon Bronze",
+      status: r.status
+    }));
+    res.json({ players });
+  } catch (e) {
+    req.log.error(e, "social search error");
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+router4.post("/social/follow/:targetId", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { targetId } = req.params;
+    if (playerId === targetId) {
+      res.status(400).json({ error: "Cannot follow yourself" });
+      return;
+    }
+    await db.insert(followsTable).values({ followerId: playerId, followingId: targetId }).onConflictDoNothing();
+    res.json({ ok: true });
+  } catch (e) {
+    req.log.error(e, "follow error");
+    res.status(500).json({ error: "Follow failed" });
+  }
+});
+router4.delete("/social/follow/:targetId", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { targetId } = req.params;
+    await db.delete(followsTable).where(
+      and(eq(followsTable.followerId, playerId), eq(followsTable.followingId, targetId))
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    req.log.error(e, "unfollow error");
+    res.status(500).json({ error: "Unfollow failed" });
+  }
+});
+router4.get("/social/following", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const rows = await db.select({ followingId: followsTable.followingId }).from(followsTable).where(eq(followsTable.followerId, playerId));
+    res.json({ following: rows.map((r) => r.followingId) });
+  } catch (e) {
+    req.log.error(e, "following error");
+    res.status(500).json({ error: "Failed" });
+  }
+});
+router4.get("/social/conversations", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const rows = await db.select().from(conversationsTable).where(
+      or(eq(conversationsTable.p1Id, playerId), eq(conversationsTable.p2Id, playerId))
+    ).orderBy(desc(conversationsTable.lastAt));
+    const othersIds = rows.map((r) => r.p1Id === playerId ? r.p2Id : r.p1Id);
+    const playerRows = othersIds.length > 0 ? await db.select({ playerId: playersTable.playerId, username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(sql`${playersTable.playerId} = ANY(${sql.raw(`ARRAY[${othersIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")}]`)})`) : [];
+    const playerMap = Object.fromEntries(playerRows.map((p) => [p.playerId, p]));
+    const conversations = rows.map((r) => {
+      const otherId = r.p1Id === playerId ? r.p2Id : r.p1Id;
+      const isP1 = r.p1Id === playerId;
+      const other = playerMap[otherId];
+      return {
+        id: r.id,
+        otherId,
+        otherUsername: other?.username ?? "Unknown",
+        otherAvatarIndex: other?.profileJson?.avatarIndex ?? 1,
+        lastPreview: r.lastPreview,
+        lastAt: r.lastAt,
+        unread: isP1 ? r.unread1 : r.unread2
+      };
+    });
+    res.json({ conversations });
+  } catch (e) {
+    req.log.error(e, "conversations error");
+    res.status(500).json({ error: "Failed to load conversations" });
+  }
+});
+router4.post("/social/conversations/start", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { targetId } = req.body;
+    if (!targetId) {
+      res.status(400).json({ error: "targetId required" });
+      return;
+    }
+    if (playerId === targetId) {
+      res.status(400).json({ error: "Cannot message yourself" });
+      return;
+    }
+    const blocked = await db.select().from(blocksTable).where(
+      or(
+        and(eq(blocksTable.blockerId, targetId), eq(blocksTable.blockedId, playerId)),
+        and(eq(blocksTable.blockerId, playerId), eq(blocksTable.blockedId, targetId))
+      )
+    ).limit(1);
+    if (blocked.length > 0) {
+      res.status(403).json({ error: "Cannot message this player" });
+      return;
+    }
+    const existing = await db.select().from(conversationsTable).where(
+      or(
+        and(eq(conversationsTable.p1Id, playerId), eq(conversationsTable.p2Id, targetId)),
+        and(eq(conversationsTable.p1Id, targetId), eq(conversationsTable.p2Id, playerId))
+      )
+    ).limit(1);
+    if (existing[0]) {
+      res.json({ conversationId: existing[0].id });
+      return;
+    }
+    const id = randomUUID3();
+    await db.insert(conversationsTable).values({ id, p1Id: playerId, p2Id: targetId });
+    res.json({ conversationId: id });
+  } catch (e) {
+    req.log.error(e, "start conversation error");
+    res.status(500).json({ error: "Failed to start conversation" });
+  }
+});
+router4.get("/social/conversations/:id/messages", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { id } = req.params;
+    const conv = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id)).limit(1);
+    if (!conv[0] || conv[0].p1Id !== playerId && conv[0].p2Id !== playerId) {
+      res.status(403).json({ error: "Not in this conversation" });
+      return;
+    }
+    const messages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.conversationId, id)).orderBy(directMessagesTable.createdAt).limit(100);
+    const isP1 = conv[0].p1Id === playerId;
+    await db.update(conversationsTable).set(isP1 ? { unread1: 0 } : { unread2: 0 }).where(eq(conversationsTable.id, id));
+    res.json({ messages });
+  } catch (e) {
+    req.log.error(e, "get messages error");
+    res.status(500).json({ error: "Failed to load messages" });
+  }
+});
+router4.post("/social/conversations/:id/messages", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { id } = req.params;
+    const { text: text2 } = req.body;
+    if (!text2 || typeof text2 !== "string" || !text2.trim()) {
+      res.status(400).json({ error: "Message text required" });
+      return;
+    }
+    if (text2.length > 500) {
+      res.status(400).json({ error: "Message too long (max 500 characters)" });
+      return;
+    }
+    if (!checkMessageRate(playerId)) {
+      res.status(429).json({ error: "Please slow down before sending another message." });
+      return;
+    }
+    const conv = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id)).limit(1);
+    if (!conv[0] || conv[0].p1Id !== playerId && conv[0].p2Id !== playerId) {
+      res.status(403).json({ error: "Not in this conversation" });
+      return;
+    }
+    const isP1 = conv[0].p1Id === playerId;
+    const recipientId = isP1 ? conv[0].p2Id : conv[0].p1Id;
+    const msgId = randomUUID3();
+    const trimmed = text2.trim();
+    const [msg] = await db.insert(directMessagesTable).values({
+      id: msgId,
+      conversationId: id,
+      senderId: playerId,
+      text: trimmed
+    }).returning();
+    await db.update(conversationsTable).set({
+      lastPreview: trimmed.length > 60 ? trimmed.slice(0, 60) + "\u2026" : trimmed,
+      lastAt: /* @__PURE__ */ new Date(),
+      ...isP1 ? { unread2: sql`unread2 + 1` } : { unread1: sql`unread1 + 1` }
+    }).where(eq(conversationsTable.id, id));
+    const senderRow = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
+    const senderName = senderRow[0]?.username ?? "Someone";
+    const senderAvatar = senderRow[0]?.profileJson?.avatarIndex ?? 1;
+    emitToPlayer(recipientId, "dm_received", {
+      conversationId: id,
+      messageId: msgId,
+      senderId: playerId,
+      senderUsername: senderName,
+      senderAvatarIndex: senderAvatar,
+      text: trimmed,
+      createdAt: msg?.createdAt ?? /* @__PURE__ */ new Date()
+    });
+    res.json({ message: msg });
+  } catch (e) {
+    req.log.error(e, "send message error");
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+router4.get("/social/inbox/unread", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const rows = await db.select({ unread1: conversationsTable.unread1, unread2: conversationsTable.unread2, p1Id: conversationsTable.p1Id }).from(conversationsTable).where(or(eq(conversationsTable.p1Id, playerId), eq(conversationsTable.p2Id, playerId)));
+    const total = rows.reduce((sum, r) => sum + (r.p1Id === playerId ? r.unread1 : r.unread2), 0);
+    res.json({ unread: total });
+  } catch (e) {
+    req.log.error(e, "unread error");
+    res.status(500).json({ error: "Failed" });
+  }
+});
+router4.post("/social/block/:targetId", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { targetId } = req.params;
+    await db.insert(blocksTable).values({ blockerId: playerId, blockedId: targetId }).onConflictDoNothing();
+    await db.delete(followsTable).where(
+      or(
+        and(eq(followsTable.followerId, playerId), eq(followsTable.followingId, targetId)),
+        and(eq(followsTable.followerId, targetId), eq(followsTable.followingId, playerId))
+      )
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    req.log.error(e, "block error");
+    res.status(500).json({ error: "Block failed" });
+  }
+});
+router4.delete("/social/block/:targetId", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { targetId } = req.params;
+    await db.delete(blocksTable).where(
+      and(eq(blocksTable.blockerId, playerId), eq(blocksTable.blockedId, targetId))
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    req.log.error(e, "unblock error");
+    res.status(500).json({ error: "Unblock failed" });
+  }
+});
+router4.get("/social/blocks", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const rows = await db.select({ blockedId: blocksTable.blockedId }).from(blocksTable).where(eq(blocksTable.blockerId, playerId));
+    res.json({ blocks: rows.map((r) => r.blockedId) });
+  } catch (e) {
+    req.log.error(e, "blocks error");
+    res.status(500).json({ error: "Failed" });
+  }
+});
+var social_default = router4;
+
+// src/routes/index.ts
+var router5 = (0, import_express5.Router)();
+router5.use(health_default);
+router5.use(auth_default);
+router5.use(admin_default);
+router5.use(social_default);
+var routes_default = router5;
 
 // src/app.ts
-var app = (0, import_express5.default)();
+var app = (0, import_express6.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -67321,8 +67648,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express5.default.json());
-app.use(import_express5.default.urlencoded({ extended: true }));
+app.use(import_express6.default.json());
+app.use(import_express6.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 
@@ -67375,6 +67702,63 @@ async function runMigrations() {
         reason           TEXT NOT NULL DEFAULT '',
         read             BOOLEAN NOT NULL DEFAULT FALSE,
         created_at       TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS moderation_actions (
+        id            TEXT PRIMARY KEY,
+        player_id     TEXT NOT NULL REFERENCES players(player_id),
+        admin_id      TEXT NOT NULL DEFAULT 'system',
+        type          TEXT NOT NULL,
+        reason        TEXT NOT NULL DEFAULT '',
+        message       TEXT,
+        duration_hours INTEGER,
+        expires_at    TIMESTAMPTZ,
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS suspension_expires_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS ban_reason TEXT;
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS follows (
+        follower_id   TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        following_id  TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        created_at    TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (follower_id, following_id)
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id            TEXT PRIMARY KEY,
+        p1_id         TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        p2_id         TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        last_preview  TEXT NOT NULL DEFAULT '',
+        last_at       TIMESTAMPTZ DEFAULT NOW(),
+        unread1       INTEGER NOT NULL DEFAULT 0,
+        unread2       INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS direct_messages (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        sender_id       TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        text            TEXT NOT NULL,
+        read_at         TIMESTAMPTZ,
+        is_reported     BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS dm_conversation_idx ON direct_messages(conversation_id, created_at);
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blocks (
+        blocker_id  TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        blocked_id  TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (blocker_id, blocked_id)
       );
     `);
     logger.info("Startup migrations complete");
