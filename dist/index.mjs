@@ -65860,6 +65860,7 @@ function drizzle(...params) {
 var schema_exports = {};
 __export(schema_exports, {
   chipTransactionsTable: () => chipTransactionsTable,
+  moderationActionsTable: () => moderationActionsTable,
   playerNotificationsTable: () => playerNotificationsTable,
   playerReportsTable: () => playerReportsTable,
   playersTable: () => playersTable
@@ -65873,6 +65874,7 @@ var playersTable = pgTable("players", {
   profileJson: jsonb("profile_json").notNull().$type(),
   status: text("status").notNull().default("active"),
   banReason: text("ban_reason"),
+  suspensionExpiresAt: timestamp("suspension_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
@@ -65906,6 +65908,18 @@ var playerNotificationsTable = pgTable("player_notifications", {
   message: text("message"),
   reason: text("reason").notNull().default(""),
   read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var moderationActionsTable = pgTable("moderation_actions", {
+  id: text("id").primaryKey(),
+  playerId: text("player_id").notNull().references(() => playersTable.playerId),
+  adminId: text("admin_id").notNull(),
+  type: text("type").notNull(),
+  // 'warning' | 'suspension' | 'ban' | 'unban'
+  reason: text("reason").notNull(),
+  message: text("message"),
+  durationHours: integer("duration_hours"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
@@ -66012,6 +66026,25 @@ router2.post("/auth/login", async (req, res) => {
     if (player.pinHash !== expected) {
       res.status(401).json({ error: "Incorrect PIN." });
       return;
+    }
+    if (player.status === "banned") {
+      res.status(403).json({
+        error: "ACCOUNT_BANNED",
+        reason: player.banReason ?? "Community violation"
+      });
+      return;
+    }
+    if (player.status === "suspended") {
+      const expiresAt = player.suspensionExpiresAt;
+      if (expiresAt && /* @__PURE__ */ new Date() < new Date(expiresAt)) {
+        res.status(403).json({
+          error: "ACCOUNT_SUSPENDED",
+          reason: player.banReason ?? "Policy violation",
+          expiresAt: expiresAt.toISOString()
+        });
+        return;
+      }
+      await db.update(playersTable).set({ status: "active", banReason: null, suspensionExpiresAt: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, player.playerId));
     }
     req.log.info({ playerId: player.playerId, username }, "Player signed in");
     res.json({ success: true, playerId: player.playerId, profile: player.profileJson });
@@ -67055,6 +67088,92 @@ router3.post("/admin/players/:id/status", async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     req.log.error(e, "admin/status error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/warn", async (req, res) => {
+  try {
+    const { reason, message, adminId = "admin" } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    const pid = req.params["id"];
+    await db.update(playersTable).set({ status: "warned", banReason: reason, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    const actionId = randomUUID2();
+    await db.insert(moderationActionsTable).values({ id: actionId, playerId: pid, adminId, type: "warning", reason, message: message ?? null });
+    await db.insert(playerNotificationsTable).values({ notificationId: randomUUID2(), playerId: pid, type: "moderation", title: "\u26A0\uFE0F Warning Received", amount: 0, message: message ?? null, reason, read: false });
+    const online = emitToPlayer(pid, "player_warning", { actionId, reason, message: message ?? null, timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+    req.log.info({ playerId: pid, reason, online }, "player warned");
+    res.json({ success: true, online, actionId });
+  } catch (e) {
+    req.log.error(e, "admin/warn error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/suspend", async (req, res) => {
+  try {
+    const { reason, message, durationHours = 24, adminId = "admin" } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    const pid = req.params["id"];
+    const expiresAt = new Date(Date.now() + Number(durationHours) * 60 * 60 * 1e3);
+    await db.update(playersTable).set({ status: "suspended", banReason: reason, suspensionExpiresAt: expiresAt, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    const actionId = randomUUID2();
+    await db.insert(moderationActionsTable).values({ id: actionId, playerId: pid, adminId, type: "suspension", reason, message: message ?? null, durationHours: Number(durationHours), expiresAt });
+    await db.insert(playerNotificationsTable).values({ notificationId: randomUUID2(), playerId: pid, type: "moderation", title: "\u26D4 Account Suspended", amount: 0, message: message ?? null, reason, read: false });
+    const online = emitToPlayer(pid, "player_suspension", { actionId, reason, message: message ?? null, durationHours: Number(durationHours), expiresAt: expiresAt.toISOString(), timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+    req.log.info({ playerId: pid, reason, durationHours, online }, "player suspended");
+    res.json({ success: true, online, actionId, expiresAt: expiresAt.toISOString() });
+  } catch (e) {
+    req.log.error(e, "admin/suspend error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/ban", async (req, res) => {
+  try {
+    const { reason, message, adminId = "admin" } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    const pid = req.params["id"];
+    await db.update(playersTable).set({ status: "banned", banReason: reason, suspensionExpiresAt: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    const actionId = randomUUID2();
+    await db.insert(moderationActionsTable).values({ id: actionId, playerId: pid, adminId, type: "ban", reason, message: message ?? null });
+    await db.insert(playerNotificationsTable).values({ notificationId: randomUUID2(), playerId: pid, type: "moderation", title: "\u{1F6AB} Account Banned", amount: 0, message: message ?? null, reason, read: false });
+    const online = emitToPlayer(pid, "player_ban", { actionId, reason, message: message ?? null, timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+    req.log.info({ playerId: pid, reason, online }, "player banned");
+    res.json({ success: true, online, actionId });
+  } catch (e) {
+    req.log.error(e, "admin/ban error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/players/:id/unban", async (req, res) => {
+  try {
+    const pid = req.params["id"];
+    await db.update(playersTable).set({ status: "active", banReason: null, suspensionExpiresAt: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    const actionId = randomUUID2();
+    await db.insert(moderationActionsTable).values({ id: actionId, playerId: pid, adminId: "admin", type: "unban", reason: "Account restored by admin", message: null });
+    emitToPlayer(pid, "player_unbanned", { timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/unban error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/moderation", async (req, res) => {
+  try {
+    const rows = await db.select().from(moderationActionsTable).orderBy(desc(moderationActionsTable.createdAt)).limit(200);
+    const playerIds = [...new Set(rows.map((r) => r.playerId))];
+    const players = playerIds.length > 0 ? await db.select({ playerId: playersTable.playerId, username: playersTable.username }).from(playersTable).where(or(...playerIds.map((id) => eq(playersTable.playerId, id)))) : [];
+    const pm = Object.fromEntries(players.map((p) => [p.playerId, p.username]));
+    res.json({ actions: rows.map((r) => ({ ...r, username: pm[r.playerId] ?? "Unknown" })), total: rows.length });
+  } catch (e) {
+    req.log.error(e, "admin/moderation error");
     res.status(500).json({ error: "Server error" });
   }
 });
