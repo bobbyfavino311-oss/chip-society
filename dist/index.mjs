@@ -65870,11 +65870,14 @@ __export(schema_exports, {
   chipTransactionsTable: () => chipTransactionsTable,
   conversationsTable: () => conversationsTable,
   directMessagesTable: () => directMessagesTable,
+  feedPostsTable: () => feedPostsTable,
   followsTable: () => followsTable,
   moderationActionsTable: () => moderationActionsTable,
   playerNotificationsTable: () => playerNotificationsTable,
   playerReportsTable: () => playerReportsTable,
-  playersTable: () => playersTable
+  playersTable: () => playersTable,
+  postCommentsTable: () => postCommentsTable,
+  postLikesTable: () => postLikesTable
 });
 var playersTable = pgTable("players", {
   playerId: text("player_id").primaryKey(),
@@ -65961,6 +65964,29 @@ var blocksTable = pgTable("blocks", {
   blockedId: text("blocked_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 }, (t) => [primaryKey({ columns: [t.blockerId, t.blockedId] })]);
+var feedPostsTable = pgTable("feed_posts", {
+  id: text("id").primaryKey(),
+  authorId: text("author_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  tag: text("tag").notNull().default("WIN"),
+  pot: text("pot"),
+  handRank: text("hand_rank"),
+  likeCount: integer("like_count").notNull().default(0),
+  commentCount: integer("comment_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var postLikesTable = pgTable("post_likes", {
+  postId: text("post_id").notNull().references(() => feedPostsTable.id, { onDelete: "cascade" }),
+  playerId: text("player_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+}, (t) => [primaryKey({ columns: [t.postId, t.playerId] })]);
+var postCommentsTable = pgTable("post_comments", {
+  id: text("id").primaryKey(),
+  postId: text("post_id").notNull().references(() => feedPostsTable.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
 var bugReportsTable = pgTable("bug_reports", {
   id: text("id").primaryKey(),
   playerId: text("player_id"),
@@ -67069,6 +67095,10 @@ var playerSockets = /* @__PURE__ */ new Map();
 var socketPlayers = /* @__PURE__ */ new Map();
 var sessionStartChips = /* @__PURE__ */ new Map();
 var _io = null;
+function emitToAll(event, data) {
+  if (!_io) return;
+  _io.emit(event, data);
+}
 function emitToPlayer(playerId, event, data) {
   const socketId = playerSockets.get(playerId);
   if (!socketId || !_io) {
@@ -68018,6 +68048,220 @@ router4.get("/social/blocks", requirePlayer, async (req, res) => {
   } catch (e) {
     req.log.error(e, "blocks error");
     res.status(500).json({ error: "Failed" });
+  }
+});
+router4.get("/social/feed", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const tab = req.query["tab"] ?? "all";
+    const cursor = req.query["cursor"];
+    const limit = 30;
+    let query = db.select({
+      id: feedPostsTable.id,
+      authorId: feedPostsTable.authorId,
+      content: feedPostsTable.content,
+      tag: feedPostsTable.tag,
+      pot: feedPostsTable.pot,
+      handRank: feedPostsTable.handRank,
+      likeCount: feedPostsTable.likeCount,
+      commentCount: feedPostsTable.commentCount,
+      createdAt: feedPostsTable.createdAt,
+      authorUsername: playersTable.username,
+      authorProfileJson: playersTable.profileJson
+    }).from(feedPostsTable).innerJoin(playersTable, eq(feedPostsTable.authorId, playersTable.playerId)).$dynamic();
+    if (tab === "me") {
+      query = query.where(
+        cursor ? and(eq(feedPostsTable.authorId, playerId), lt(feedPostsTable.createdAt, new Date(cursor))) : eq(feedPostsTable.authorId, playerId)
+      ).orderBy(desc(feedPostsTable.createdAt)).limit(limit);
+    } else if (tab === "trending") {
+      query = query.orderBy(desc(sql`${feedPostsTable.likeCount} + ${feedPostsTable.commentCount} * 2`)).limit(limit);
+    } else {
+      query = query.where(
+        cursor ? lt(feedPostsTable.createdAt, new Date(cursor)) : sql`1=1`
+      ).orderBy(desc(feedPostsTable.createdAt)).limit(limit);
+    }
+    const rows = await query;
+    const postIds = rows.map((r) => r.id);
+    const likedRows = postIds.length > 0 ? await db.select({ postId: postLikesTable.postId }).from(postLikesTable).where(and(eq(postLikesTable.playerId, playerId), inArray(postLikesTable.postId, postIds))) : [];
+    const likedSet = new Set(likedRows.map((r) => r.postId));
+    const posts = rows.map((r) => ({
+      id: r.id,
+      authorId: r.authorId,
+      authorUsername: r.authorUsername,
+      authorAvatarIndex: r.authorProfileJson?.avatarIndex ?? 1,
+      authorRank: r.authorProfileJson?.rank ?? "Neon Bronze",
+      content: r.content,
+      tag: r.tag,
+      pot: r.pot ?? null,
+      handRank: r.handRank ?? null,
+      likeCount: r.likeCount,
+      commentCount: r.commentCount,
+      likedByMe: likedSet.has(r.id),
+      createdAt: r.createdAt
+    }));
+    res.json({ posts });
+  } catch (e) {
+    req.log.error(e, "feed error");
+    res.status(500).json({ error: "Failed to load feed" });
+  }
+});
+router4.post("/social/posts", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { content, tag, pot, handRank } = req.body;
+    if (!content || typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ error: "content required" });
+      return;
+    }
+    if (content.trim().length > 280) {
+      res.status(400).json({ error: "Post too long (max 280 characters)" });
+      return;
+    }
+    const authorRow = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
+    if (!authorRow[0]) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const id = randomUUID3();
+    const [created] = await db.insert(feedPostsTable).values({
+      id,
+      authorId: playerId,
+      content: content.trim(),
+      tag: tag ?? "WIN",
+      pot: pot?.trim() || null,
+      handRank: handRank?.trim() || null
+    }).returning();
+    const post = {
+      id: created.id,
+      authorId: playerId,
+      authorUsername: authorRow[0].username,
+      authorAvatarIndex: authorRow[0].profileJson?.avatarIndex ?? 1,
+      authorRank: authorRow[0].profileJson?.rank ?? "Neon Bronze",
+      content: created.content,
+      tag: created.tag,
+      pot: created.pot ?? null,
+      handRank: created.handRank ?? null,
+      likeCount: 0,
+      commentCount: 0,
+      likedByMe: false,
+      createdAt: created.createdAt
+    };
+    emitToAll("new_feed_post", post);
+    res.status(201).json({ post });
+  } catch (e) {
+    req.log.error(e, "create post error");
+    res.status(500).json({ error: "Failed to create post" });
+  }
+});
+router4.post("/social/posts/:id/like", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { id: postId } = req.params;
+    const existing = await db.select().from(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.playerId, playerId))).limit(1);
+    let liked;
+    if (existing.length > 0) {
+      await db.delete(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.playerId, playerId)));
+      await db.update(feedPostsTable).set({ likeCount: sql`GREATEST(0, ${feedPostsTable.likeCount} - 1)` }).where(eq(feedPostsTable.id, postId));
+      liked = false;
+    } else {
+      await db.insert(postLikesTable).values({ postId, playerId }).onConflictDoNothing();
+      await db.update(feedPostsTable).set({ likeCount: sql`${feedPostsTable.likeCount} + 1` }).where(eq(feedPostsTable.id, postId));
+      liked = true;
+    }
+    const [updated] = await db.select({ likeCount: feedPostsTable.likeCount }).from(feedPostsTable).where(eq(feedPostsTable.id, postId)).limit(1);
+    res.json({ liked, likeCount: updated?.likeCount ?? 0 });
+  } catch (e) {
+    req.log.error(e, "like toggle error");
+    res.status(500).json({ error: "Failed to toggle like" });
+  }
+});
+router4.get("/social/posts/:id/comments", requirePlayer, async (req, res) => {
+  try {
+    const { id: postId } = req.params;
+    const rows = await db.select({
+      id: postCommentsTable.id,
+      postId: postCommentsTable.postId,
+      authorId: postCommentsTable.authorId,
+      text: postCommentsTable.text,
+      createdAt: postCommentsTable.createdAt,
+      authorUsername: playersTable.username,
+      authorProfileJson: playersTable.profileJson
+    }).from(postCommentsTable).innerJoin(playersTable, eq(postCommentsTable.authorId, playersTable.playerId)).where(eq(postCommentsTable.postId, postId)).orderBy(desc(postCommentsTable.createdAt)).limit(50);
+    const comments = rows.map((r) => ({
+      id: r.id,
+      postId: r.postId,
+      authorId: r.authorId,
+      authorUsername: r.authorUsername,
+      authorAvatarIndex: r.authorProfileJson?.avatarIndex ?? 1,
+      text: r.text,
+      createdAt: r.createdAt
+    }));
+    res.json({ comments });
+  } catch (e) {
+    req.log.error(e, "get comments error");
+    res.status(500).json({ error: "Failed to load comments" });
+  }
+});
+router4.post("/social/posts/:id/comments", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { id: postId } = req.params;
+    const { text: text2 } = req.body;
+    if (!text2 || typeof text2 !== "string" || !text2.trim()) {
+      res.status(400).json({ error: "text required" });
+      return;
+    }
+    if (text2.length > 280) {
+      res.status(400).json({ error: "Comment too long" });
+      return;
+    }
+    const authorRow = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
+    if (!authorRow[0]) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const id = randomUUID3();
+    const [created] = await db.insert(postCommentsTable).values({
+      id,
+      postId,
+      authorId: playerId,
+      text: text2.trim()
+    }).returning();
+    await db.update(feedPostsTable).set({ commentCount: sql`${feedPostsTable.commentCount} + 1` }).where(eq(feedPostsTable.id, postId));
+    const comment = {
+      id: created.id,
+      postId: created.postId,
+      authorId: playerId,
+      authorUsername: authorRow[0].username,
+      authorAvatarIndex: authorRow[0].profileJson?.avatarIndex ?? 1,
+      text: created.text,
+      createdAt: created.createdAt
+    };
+    emitToPlayer(postId, "new_comment", comment);
+    res.status(201).json({ comment });
+  } catch (e) {
+    req.log.error(e, "add comment error");
+    res.status(500).json({ error: "Failed to add comment" });
+  }
+});
+router4.delete("/social/posts/:id", requirePlayer, async (req, res) => {
+  try {
+    const { playerId } = req;
+    const { id } = req.params;
+    const existing = await db.select({ authorId: feedPostsTable.authorId }).from(feedPostsTable).where(eq(feedPostsTable.id, id)).limit(1);
+    if (!existing[0]) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+    if (existing[0].authorId !== playerId) {
+      res.status(403).json({ error: "Not your post" });
+      return;
+    }
+    await db.delete(feedPostsTable).where(eq(feedPostsTable.id, id));
+    res.json({ ok: true });
+  } catch (e) {
+    req.log.error(e, "delete post error");
+    res.status(500).json({ error: "Failed to delete post" });
   }
 });
 var social_default = router4;
