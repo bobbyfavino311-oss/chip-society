@@ -20600,27 +20600,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router6;
+    module.exports = Router7;
     module.exports.Route = Route;
-    function Router6(options) {
-      if (!(this instanceof Router6)) {
-        return new Router6(options);
+    function Router7(options) {
+      if (!(this instanceof Router7)) {
+        return new Router7(options);
       }
       const opts = options || {};
-      function router6(req, res, next) {
-        router6.handle(req, res, next);
+      function router7(req, res, next) {
+        router7.handle(req, res, next);
       }
-      Object.setPrototypeOf(router6, this);
-      router6.caseSensitive = opts.caseSensitive;
-      router6.mergeParams = opts.mergeParams;
-      router6.params = {};
-      router6.strict = opts.strict;
-      router6.stack = [];
-      return router6;
+      Object.setPrototypeOf(router7, this);
+      router7.caseSensitive = opts.caseSensitive;
+      router7.mergeParams = opts.mergeParams;
+      router7.params = {};
+      router7.strict = opts.strict;
+      router7.stack = [];
+      return router7;
     }
-    Router6.prototype = function() {
+    Router7.prototype = function() {
     };
-    Router6.prototype.param = function param(name, fn) {
+    Router7.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20640,7 +20640,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router6.prototype.handle = function handle(req, res, callback) {
+    Router7.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20767,7 +20767,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router6.prototype.use = function use(handler) {
+    Router7.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -20800,7 +20800,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router6.prototype.route = function route(path) {
+    Router7.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20815,7 +20815,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router6.prototype[method] = function(path) {
+      Router7.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20998,13 +20998,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router6 = require_router();
+    var Router7 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router6 = null;
+      var router7 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21013,13 +21013,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router6 === null) {
-            router6 = new Router6({
+          if (router7 === null) {
+            router7 = new Router7({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router6;
+          return router7;
         }
       });
     };
@@ -21090,15 +21090,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router6 = this.router;
+      var router7 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router6.use(path, fn2);
+          return router7.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router6.use(path, function mounted_app(req, res, next) {
+        router7.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23625,7 +23625,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router6 = require_router();
+    var Router7 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23647,8 +23647,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router6.Route;
-    exports.Router = Router6;
+    exports.Route = Router7.Route;
+    exports.Router = Router7;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -54992,12 +54992,12 @@ var require_dist4 = __commonJS({
 import { createServer } from "http";
 
 // src/app.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express5 = __toESM(require_express2(), 1);
+var import_express6 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -65866,6 +65866,7 @@ function drizzle(...params) {
 var schema_exports = {};
 __export(schema_exports, {
   blocksTable: () => blocksTable,
+  bugReportsTable: () => bugReportsTable,
   chipTransactionsTable: () => chipTransactionsTable,
   conversationsTable: () => conversationsTable,
   directMessagesTable: () => directMessagesTable,
@@ -65960,6 +65961,20 @@ var blocksTable = pgTable("blocks", {
   blockedId: text("blocked_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 }, (t) => [primaryKey({ columns: [t.blockerId, t.blockedId] })]);
+var bugReportsTable = pgTable("bug_reports", {
+  id: text("id").primaryKey(),
+  playerId: text("player_id"),
+  username: text("username").notNull().default("Anonymous"),
+  category: text("category").notNull().default("other"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  deviceInfo: jsonb("device_info").$type().notNull().default({}),
+  status: text("status").notNull().default("open"),
+  priority: text("priority").notNull().default("medium"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
 
 // ../../lib/db/src/index.ts
 var { Pool: Pool3 } = esm_default;
@@ -66277,22 +66292,29 @@ var PokerRoom = class {
   currentBet = 0;
   winners = [];
   messages = [];
+  spectators = /* @__PURE__ */ new Set();
+  requestedSitOut = /* @__PURE__ */ new Set();
   actedThisRound = /* @__PURE__ */ new Set();
   turnTimer = null;
   handTimer = null;
   turnTimeoutAt = null;
   emit;
   broadcast;
-  constructor(id, config, emit, broadcast) {
+  onChipSync;
+  constructor(id, config, emit, broadcast, onChipSync2) {
     this.id = id;
     this.config = config;
     this.seats = new Array(config.maxPlayers).fill(null);
     this.emit = emit;
     this.broadcast = broadcast;
+    this.onChipSync = onChipSync2 ?? null;
   }
   // ─── Player management ────────────────────────────────────────────────────
   findSeatBySocketId(socketId) {
     return this.seats.findIndex((s) => s?.socketId === socketId);
+  }
+  findSeatByUserId(userId) {
+    return this.seats.findIndex((s) => s?.userId === userId);
   }
   addPlayer(socketId, userId, username, avatarId, chips) {
     const emptyIdx = this.seats.findIndex((s) => s === null);
@@ -66303,17 +66325,113 @@ var PokerRoom = class {
       username,
       avatarId,
       chips,
+      startingChips: chips,
       cards: [],
       currentBet: 0,
       totalBet: 0,
-      status: "sitting_out"
+      status: "active"
     };
     this.addMessage(`${username} joined the table`, "info");
     this.broadcastState();
     this.maybeScheduleHandStart();
     return emptyIdx;
   }
+  // ─── Soft disconnect (60 s reconnect window, handled by RoomManager) ──────
+  /**
+   * Mark a player as disconnected. Auto-folds their turn if active.
+   * Returns the player's userId so the caller can schedule a hard-remove timer.
+   */
+  markDisconnected(socketId) {
+    const idx = this.findSeatBySocketId(socketId);
+    if (idx === -1) return null;
+    const seat = this.seats[idx];
+    seat.isDisconnected = true;
+    seat.disconnectedAt = Date.now();
+    this.addMessage(`${seat.username} disconnected \u2014 60s to rejoin`, "info");
+    if (this.phase !== "waiting" && this.phase !== "showdown" && idx === this.activeSeat && seat.status === "active") {
+      this.clearTurnTimer();
+      seat.status = "folded";
+      this.actedThisRound.add(idx);
+      this.broadcastState();
+      this.advanceAfterAction();
+    } else {
+      this.broadcastState();
+    }
+    return seat.userId;
+  }
+  /** Restore a player's socket after they reconnect. */
+  reconnectPlayer(userId, newSocketId) {
+    const idx = this.findSeatByUserId(userId);
+    if (idx === -1) return false;
+    const seat = this.seats[idx];
+    seat.socketId = newSocketId;
+    seat.isDisconnected = false;
+    delete seat.disconnectedAt;
+    this.addMessage(`${seat.username} reconnected`, "info");
+    this.broadcastState();
+    return true;
+  }
+  /** Hard-remove a player by userId (called after the 60 s grace period). */
+  removePlayerByUserId(userId) {
+    const idx = this.findSeatByUserId(userId);
+    if (idx === -1) return;
+    const seat = this.seats[idx];
+    this.addMessage(`${seat.username} removed (timed out)`, "info");
+    if (this.phase !== "waiting" && this.phase !== "showdown" && idx === this.activeSeat) {
+      this.seats[idx].status = "folded";
+      this.seats[idx] = null;
+      this.broadcastState();
+      this.advanceAfterAction();
+    } else {
+      this.seats[idx] = null;
+      this.broadcastState();
+    }
+    this.checkTableVacant();
+  }
+  // ─── Spectator management ─────────────────────────────────────────────────
+  addSpectator(socketId) {
+    this.spectators.add(socketId);
+    this.emit(socketId, "game_state", this.getClientStateFor(socketId));
+  }
+  removeSpectator(socketId) {
+    this.spectators.delete(socketId);
+  }
+  // ─── Sit-out toggle ───────────────────────────────────────────────────────
+  handleSitOut(socketId, wantsSitOut) {
+    const seat = this.seats[this.findSeatBySocketId(socketId)];
+    if (!seat) return;
+    if (wantsSitOut) {
+      this.requestedSitOut.add(socketId);
+      if (this.phase === "waiting") seat.status = "sitting_out";
+      this.addMessage(`${seat.username} is sitting out next hand`, "info");
+    } else {
+      this.requestedSitOut.delete(socketId);
+      if (seat.status === "sitting_out") seat.status = "active";
+      this.addMessage(`${seat.username} is back in`, "info");
+      if (this.phase === "waiting") this.maybeScheduleHandStart();
+    }
+    this.broadcastState();
+  }
+  // ─── Chat ─────────────────────────────────────────────────────────────────
+  handleChat(socketId, text2) {
+    const seat = this.seats[this.findSeatBySocketId(socketId)];
+    const spectator = this.spectators.has(socketId);
+    if (!seat && !spectator) return;
+    const username = seat?.username ?? "Spectator";
+    const userId = seat?.userId ?? socketId;
+    const ts = Date.now();
+    const cleaned = text2.replace(/\b(fuck|shit|bitch|cunt|cock|ass)\b/gi, (m) => "*".repeat(m.length)).trim().slice(0, 100);
+    if (!cleaned) return;
+    const payload = { playerId: userId, playerName: username, text: cleaned, ts };
+    for (const s of this.seats) {
+      if (s) this.emit(s.socketId, "chat_message", payload);
+    }
+    for (const sid of this.spectators) {
+      this.emit(sid, "chat_message", payload);
+    }
+  }
   removePlayer(socketId) {
+    this.requestedSitOut.delete(socketId);
     const idx = this.findSeatBySocketId(socketId);
     if (idx === -1) return;
     const seat = this.seats[idx];
@@ -66336,9 +66454,14 @@ var PokerRoom = class {
     return this.playerCount === 0;
   }
   // ─── Hand lifecycle ───────────────────────────────────────────────────────
+  readyCount() {
+    return this.seats.filter(
+      (s) => s !== null && !this.requestedSitOut.has(s.socketId) && !s.isDisconnected
+    ).length;
+  }
   maybeScheduleHandStart() {
     if (this.phase !== "waiting") return;
-    if (this.playerCount < 2) return;
+    if (this.readyCount() < 2) return;
     if (this.handTimer) return;
     this.handTimer = setTimeout(() => {
       this.handTimer = null;
@@ -66346,7 +66469,10 @@ var PokerRoom = class {
     }, HAND_START_DELAY_MS);
   }
   startHand() {
-    const activePlayers = this.seats.map((s, i) => ({ s, i })).filter((x) => x.s !== null);
+    const allSeated = this.seats.map((s, i) => ({ s, i })).filter((x) => x.s !== null);
+    const activePlayers = allSeated.filter(
+      (x) => !this.requestedSitOut.has(x.s.socketId) && !x.s.isDisconnected
+    );
     if (activePlayers.length < 2) {
       this.phase = "waiting";
       this.broadcastState();
@@ -66359,12 +66485,16 @@ var PokerRoom = class {
     this.winners = [];
     this.messages = [];
     this.actedThisRound.clear();
-    for (const { s } of activePlayers) {
-      if (s) {
+    for (const { s } of allSeated) {
+      if (!s) continue;
+      if (this.requestedSitOut.has(s.socketId) || s.isDisconnected) {
+        s.status = "sitting_out";
+      } else {
         s.cards = [];
         s.currentBet = 0;
         s.totalBet = 0;
         s.status = "active";
+        s.startingChips = s.chips;
       }
     }
     this.dealerSeat = this.nextActiveSeatFrom(this.dealerSeat === -1 ? 0 : this.dealerSeat, true);
@@ -66613,6 +66743,7 @@ var PokerRoom = class {
       this.awardSidePots();
     }
     this.broadcastState();
+    this.fireChipSync();
     this.handTimer = setTimeout(() => {
       this.handTimer = null;
       for (let i = 0; i < this.seats.length; i++) {
@@ -66628,6 +66759,11 @@ var PokerRoom = class {
         this.broadcastState();
       }
     }, SHOWDOWN_DELAY_MS);
+  }
+  fireChipSync() {
+    if (!this.onChipSync) return;
+    const seated = this.seats.filter((s) => s !== null).map((s) => ({ userId: s.userId, chips: s.chips }));
+    this.onChipSync(seated);
   }
   // ─── Turn timer ───────────────────────────────────────────────────────────
   startTurnTimer() {
@@ -66702,7 +66838,8 @@ var PokerRoom = class {
         cardCount: s.cards.length,
         cards: s.socketId === socketId ? s.cards : void 0,
         revealedCards: this.phase === "showdown" && s.status !== "folded" ? s.cards : void 0,
-        revealedHand: this.phase === "showdown" && isWinner ? this.winners.find((w) => w.seatIndex === i)?.handRank : void 0
+        revealedHand: this.phase === "showdown" && isWinner ? this.winners.find((w) => w.seatIndex === i)?.handRank : void 0,
+        isDisconnected: s.isDisconnected
       };
     });
     return {
@@ -66741,10 +66878,13 @@ var PokerRoom = class {
   }
   broadcastState() {
     for (const seat of this.seats) {
-      if (seat) {
+      if (seat && !seat.isDisconnected) {
         const state = this.getClientStateFor(seat.socketId);
         this.emit(seat.socketId, "game_state", state);
       }
+    }
+    for (const sid of this.spectators) {
+      this.emit(sid, "game_state", this.getClientStateFor(sid));
     }
     this.broadcast(this.id, "lobby_update", null);
   }
@@ -66762,18 +66902,30 @@ var STAKE_CONFIG = {
 
 // src/poker/roomManager.ts
 var RoomManager = class {
-  constructor(emit, broadcast) {
+  // userId → timer
+  constructor(emit, broadcast, onChipSync2) {
     this.emit = emit;
     this.broadcast = broadcast;
+    this.onChipSync = onChipSync2;
   }
   rooms = /* @__PURE__ */ new Map();
   socketRoom = /* @__PURE__ */ new Map();
-  // socketId → roomId
-  counter = 0;
+  // socketId → roomId (seated)
+  userIdRoom = /* @__PURE__ */ new Map();
+  // userId   → roomId (for reconnect)
+  spectatorRoom = /* @__PURE__ */ new Map();
+  // socketId → roomId (spectating)
+  disconnectTimers = /* @__PURE__ */ new Map();
+  generateCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return this.rooms.has(code) ? this.generateCode() : code;
+  }
   createRoom(stakeTier, maxPlayers = 5) {
-    const id = `room_${++this.counter}_${stakeTier}`;
+    const id = this.generateCode();
     const config = { ...STAKE_CONFIG[stakeTier], maxPlayers };
-    const room = new PokerRoom(id, config, this.emit, this.broadcast);
+    const room = new PokerRoom(id, config, this.emit, this.broadcast, this.onChipSync);
     this.rooms.set(id, room);
     return room;
   }
@@ -66784,6 +66936,10 @@ var RoomManager = class {
     const roomId = this.socketRoom.get(socketId);
     return roomId ? this.rooms.get(roomId) : void 0;
   }
+  getRoomForUser(userId) {
+    const roomId = this.userIdRoom.get(userId);
+    return roomId ? this.rooms.get(roomId) : void 0;
+  }
   joinRoom(socketId, roomId, userId, username, avatarId, chips) {
     const room = this.rooms.get(roomId);
     if (!room) return false;
@@ -66792,16 +66948,71 @@ var RoomManager = class {
     const seatIdx = room.addPlayer(socketId, userId, username, avatarId, Math.min(chips, room.config.maxBuyIn));
     if (seatIdx === -1) return false;
     this.socketRoom.set(socketId, roomId);
+    this.userIdRoom.set(userId, roomId);
     return true;
   }
   leaveRoom(socketId) {
     const room = this.getRoomForSocket(socketId);
     if (!room) return;
+    const seatIdx = room.findSeatBySocketId(socketId);
+    const userId = seatIdx !== -1 ? room.seats[seatIdx]?.userId : void 0;
     room.removePlayer(socketId);
     this.socketRoom.delete(socketId);
+    if (userId) {
+      this.userIdRoom.delete(userId);
+      const timer = this.disconnectTimers.get(userId);
+      if (timer) {
+        clearTimeout(timer);
+        this.disconnectTimers.delete(userId);
+      }
+    }
     if (room.isEmpty()) {
       this.rooms.delete(room.id);
     }
+  }
+  /**
+   * Soft-disconnect: marks the seat as disconnected (auto-folds if their turn),
+   * removes the socket mapping, and schedules a 60 s hard-remove timer.
+   * The userId → roomId mapping is preserved so reconnectPlayer() can find the seat.
+   */
+  softDisconnect(socketId) {
+    const room = this.getRoomForSocket(socketId);
+    if (!room) return;
+    const userId = room.markDisconnected(socketId);
+    this.socketRoom.delete(socketId);
+    if (!userId) return;
+    const existing = this.disconnectTimers.get(userId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.disconnectTimers.delete(userId);
+      this.userIdRoom.delete(userId);
+      room.removePlayerByUserId(userId);
+      if (room.isEmpty()) this.rooms.delete(room.id);
+    }, 6e4);
+    this.disconnectTimers.set(userId, timer);
+  }
+  /**
+   * Reconnect a player who lost their socket connection.
+   * Cancels their disconnect timer, updates the seat's socketId, and
+   * re-registers the socket → room mapping.
+   */
+  reconnectPlayer(userId, newSocketId) {
+    const roomId = this.userIdRoom.get(userId);
+    if (!roomId) return null;
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      this.userIdRoom.delete(userId);
+      return null;
+    }
+    const timer = this.disconnectTimers.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectTimers.delete(userId);
+    }
+    const ok = room.reconnectPlayer(userId, newSocketId);
+    if (!ok) return null;
+    this.socketRoom.set(newSocketId, roomId);
+    return room;
   }
   findOrCreateRoom(stakeTier, maxPlayers) {
     for (const room of this.rooms.values()) {
@@ -66813,6 +67024,20 @@ var RoomManager = class {
   }
   getLobbyTables() {
     return [...this.rooms.values()].map((r) => r.getLobbyInfo()).sort((a, b) => a.smallBlind - b.smallBlind);
+  }
+  // ─── Spectator tracking ───────────────────────────────────────────────────
+  registerSpectator(socketId, roomId) {
+    this.spectatorRoom.set(socketId, roomId);
+  }
+  unregisterSpectator(socketId) {
+    this.spectatorRoom.delete(socketId);
+  }
+  getSpectatingRoomId(socketId) {
+    return this.spectatorRoom.get(socketId);
+  }
+  getSpectatingRoom(socketId) {
+    const roomId = this.spectatorRoom.get(socketId);
+    return roomId ? this.rooms.get(roomId) : void 0;
   }
   cleanupEmpty() {
     for (const [id, room] of this.rooms.entries()) {
@@ -66842,17 +67067,60 @@ var logger = (0, import_pino.default)({
 // src/sockets/index.ts
 var playerSockets = /* @__PURE__ */ new Map();
 var socketPlayers = /* @__PURE__ */ new Map();
+var sessionStartChips = /* @__PURE__ */ new Map();
 var _io = null;
 function emitToPlayer(playerId, event, data) {
   const socketId = playerSockets.get(playerId);
   if (!socketId || !_io) {
-    logger.info({ playerId, event, socketFound: false }, "emitToPlayer: player offline or server not ready");
+    logger.info({ playerId, event, socketFound: false }, "emitToPlayer: player offline");
     return false;
   }
   _io.to(socketId).emit(event, data);
-  logger.info({ playerId, socketId, event, socketFound: true }, "emitToPlayer: event emitted");
+  logger.info({ playerId, socketId, event }, "emitToPlayer: event emitted");
   return true;
 }
+async function loadPlayerChips(userId) {
+  try {
+    const rows = await db.select({ profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, userId)).limit(1);
+    if (!rows.length) return null;
+    const chips = rows[0].profileJson?.chips;
+    return typeof chips === "number" ? chips : null;
+  } catch (e) {
+    logger.warn({ err: e, userId }, "loadPlayerChips: DB error");
+    return null;
+  }
+}
+async function syncChipsToDb(userId, newChips) {
+  try {
+    const startChips = sessionStartChips.get(userId);
+    if (startChips === void 0) return;
+    const delta = newChips - startChips;
+    if (delta === 0) return;
+    const rows = await db.select({ profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, userId)).limit(1);
+    if (!rows.length) return;
+    const updated = { ...rows[0].profileJson, chips: newChips };
+    await db.update(playersTable).set({ profileJson: updated, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, userId));
+    await db.insert(chipTransactionsTable).values({
+      txId: `mp_${userId}_${Date.now()}`,
+      playerId: userId,
+      type: delta > 0 ? "multiplayer_win" : "multiplayer_loss",
+      amount: Math.abs(delta),
+      balanceAfter: newChips,
+      note: "Multiplayer hand result"
+    });
+    sessionStartChips.set(userId, newChips);
+    logger.info({ userId, delta, newChips }, "Chip sync complete");
+  } catch (e) {
+    logger.error({ err: e, userId }, "Chip sync failed");
+  }
+}
+var onChipSync = (seats) => {
+  for (const { userId, chips } of seats) {
+    syncChipsToDb(userId, chips).catch(
+      (e) => logger.error({ err: e, userId }, "syncChipsToDb unhandled rejection")
+    );
+  }
+};
 function setupSocketIO(httpServer2) {
   const io2 = new Server(httpServer2, {
     path: "/api/socket.io",
@@ -66864,10 +67132,9 @@ function setupSocketIO(httpServer2) {
     io2.to(socketId).emit(event, data);
   };
   const broadcast = (roomId, _event, _data) => {
-    const tables = manager.getLobbyTables();
-    io2.emit("lobby_state", { tables });
+    io2.emit("lobby_state", { tables: manager.getLobbyTables() });
   };
-  const manager = new RoomManager(emit, broadcast);
+  const manager = new RoomManager(emit, broadcast, onChipSync);
   io2.on("connection", (socket) => {
     logger.info({ socketId: socket.id }, "Socket connected");
     socket.on("register_player", (payload) => {
@@ -66880,13 +67147,20 @@ function setupSocketIO(httpServer2) {
       playerSockets.set(playerId, socket.id);
       socketPlayers.set(socket.id, playerId);
       socket.join(`player:${playerId}`);
-      logger.info({ playerId, socketId: socket.id, username: payload.username ?? "unknown" }, "Player registered for push notifications");
+      logger.info({ playerId, socketId: socket.id }, "Player registered");
     });
     socket.on("get_lobby", () => {
       socket.emit("lobby_state", { tables: manager.getLobbyTables() });
     });
-    socket.on("create_table", (payload) => {
+    socket.on("create_table", async (payload) => {
       try {
+        const existing = manager.getRoomForSocket(socket.id);
+        if (existing) {
+          socket.emit("error", { message: "Already seated at a table. Leave first." });
+          return;
+        }
+        const dbChips = await loadPlayerChips(payload.userId);
+        const chips = dbChips !== null ? dbChips : payload.chips;
         const tier = payload.stakeTier;
         const room = manager.createRoom(tier, payload.maxPlayers ?? 5);
         const ok = manager.joinRoom(
@@ -66895,43 +67169,109 @@ function setupSocketIO(httpServer2) {
           payload.userId,
           payload.username,
           payload.avatarId,
-          payload.chips
+          chips
         );
         if (!ok) {
-          socket.emit("error", { message: "Could not join created table \u2014 check chip balance." });
+          manager.getRoom(room.id) && manager.cleanupEmpty();
+          socket.emit("error", { message: "Insufficient chips for this stake level." });
           return;
         }
+        sessionStartChips.set(payload.userId, chips);
         socket.join(room.id);
         socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
-        logger.info({ roomId: room.id, socketId: socket.id }, "Table created");
+        logger.info({ roomId: room.id, socketId: socket.id, userId: payload.userId }, "Table created");
       } catch (e) {
+        logger.error({ err: e }, "create_table error");
         socket.emit("error", { message: "Failed to create table." });
       }
     });
-    socket.on("join_table", (payload) => {
-      const existing = manager.getRoomForSocket(socket.id);
-      if (existing) {
-        socket.emit("error", { message: "Already seated at a table. Leave first." });
-        return;
+    socket.on("join_table", async (payload) => {
+      try {
+        const existing = manager.getRoomForSocket(socket.id);
+        if (existing) {
+          socket.emit("error", { message: "Already seated at a table. Leave first." });
+          return;
+        }
+        const dbChips = await loadPlayerChips(payload.userId);
+        const chips = dbChips !== null ? dbChips : payload.chips;
+        const ok = manager.joinRoom(
+          socket.id,
+          payload.tableId,
+          payload.userId,
+          payload.username,
+          payload.avatarId,
+          chips
+        );
+        if (!ok) {
+          socket.emit("error", { message: "Cannot join table \u2014 full, closed, or insufficient chips." });
+          return;
+        }
+        const room = manager.getRoom(payload.tableId);
+        sessionStartChips.set(payload.userId, chips);
+        socket.join(payload.tableId);
+        socket.emit("joined_table", { tableId: payload.tableId, state: room.getClientStateFor(socket.id) });
+        io2.emit("lobby_state", { tables: manager.getLobbyTables() });
+        logger.info({ roomId: payload.tableId, socketId: socket.id, userId: payload.userId }, "Joined table");
+      } catch (e) {
+        logger.error({ err: e }, "join_table error");
+        socket.emit("error", { message: "Failed to join table." });
       }
-      const ok = manager.joinRoom(
-        socket.id,
-        payload.tableId,
-        payload.userId,
-        payload.username,
-        payload.avatarId,
-        payload.chips
-      );
-      if (!ok) {
-        socket.emit("error", { message: "Cannot join table \u2014 full or insufficient chips." });
-        return;
+    });
+    socket.on("quick_join", async (payload) => {
+      try {
+        const existing = manager.getRoomForSocket(socket.id);
+        if (existing) {
+          socket.emit("error", { message: "Already seated at a table. Leave first." });
+          return;
+        }
+        const dbChips = await loadPlayerChips(payload.userId);
+        if (dbChips === null) {
+          socket.emit("error", { message: "Account not found. Please log in again." });
+          return;
+        }
+        const tier = payload.stakeTier;
+        const room = manager.findOrCreateRoom(tier, 5);
+        const ok = manager.joinRoom(
+          socket.id,
+          room.id,
+          payload.userId,
+          payload.username,
+          payload.avatarId,
+          dbChips
+        );
+        if (!ok) {
+          socket.emit("error", { message: "Could not find a suitable table. Try a different stake level." });
+          return;
+        }
+        sessionStartChips.set(payload.userId, dbChips);
+        socket.join(room.id);
+        socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
+        io2.emit("lobby_state", { tables: manager.getLobbyTables() });
+        logger.info({ roomId: room.id, userId: payload.userId, tier }, "Quick join");
+      } catch (e) {
+        logger.error({ err: e }, "quick_join error");
+        socket.emit("error", { message: "Quick join failed. Please try again." });
       }
-      const room = manager.getRoom(payload.tableId);
-      socket.join(payload.tableId);
-      socket.emit("joined_table", { tableId: payload.tableId, state: room.getClientStateFor(socket.id) });
-      io2.emit("lobby_state", { tables: manager.getLobbyTables() });
-      logger.info({ roomId: payload.tableId, socketId: socket.id }, "Joined table");
+    });
+    socket.on("rejoin_table", (payload) => {
+      try {
+        const room = manager.reconnectPlayer(payload.userId, socket.id);
+        if (!room) {
+          socket.emit("rejoin_failed", { message: "Table no longer exists or seat expired." });
+          return;
+        }
+        playerSockets.set(payload.userId, socket.id);
+        socketPlayers.set(socket.id, payload.userId);
+        socket.join(`player:${payload.userId}`);
+        socket.join(room.id);
+        socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
+        io2.emit("lobby_state", { tables: manager.getLobbyTables() });
+        logger.info({ roomId: room.id, userId: payload.userId, socketId: socket.id }, "Player reconnected");
+      } catch (e) {
+        logger.error({ err: e }, "rejoin_table error");
+        socket.emit("rejoin_failed", { message: "Reconnect failed. Please rejoin manually." });
+      }
     });
     socket.on("leave_table", () => {
       const room = manager.getRoomForSocket(socket.id);
@@ -66945,17 +67285,53 @@ function setupSocketIO(httpServer2) {
       if (!room) return;
       room.handleAction(socket.id, { type: payload.type, amount: payload.amount });
     });
+    socket.on("send_chat", (payload) => {
+      const room = manager.getRoomForSocket(socket.id) ?? manager.getSpectatingRoom(socket.id);
+      if (!room || !payload.text) return;
+      room.handleChat(socket.id, payload.text);
+    });
+    socket.on("spectate_table", (payload) => {
+      const room = manager.getRoom(payload.tableId);
+      if (!room) {
+        socket.emit("error", { message: "Table not found." });
+        return;
+      }
+      socket.join(payload.tableId);
+      room.addSpectator(socket.id);
+      manager.registerSpectator(socket.id, payload.tableId);
+      logger.info({ roomId: payload.tableId, socketId: socket.id }, "Spectator joined");
+    });
+    socket.on("stop_spectating", () => {
+      const roomId = manager.getSpectatingRoomId(socket.id);
+      if (roomId) {
+        manager.getRoom(roomId)?.removeSpectator(socket.id);
+        manager.unregisterSpectator(socket.id);
+        socket.leave(roomId);
+      }
+      socket.emit("stopped_spectating", {});
+    });
+    socket.on("sit_out", (payload) => {
+      const room = manager.getRoomForSocket(socket.id);
+      if (!room) return;
+      room.handleSitOut(socket.id, payload.sitOut);
+    });
     socket.on("disconnect", () => {
       logger.info({ socketId: socket.id }, "Socket disconnected");
       const pid = socketPlayers.get(socket.id);
       if (pid) {
         playerSockets.delete(pid);
         socketPlayers.delete(socket.id);
-        logger.info({ playerId: pid, socketId: socket.id }, "Player presence removed on disconnect");
+      }
+      const spectatingRoomId = manager.getSpectatingRoomId(socket.id);
+      if (spectatingRoomId) {
+        manager.getRoom(spectatingRoomId)?.removeSpectator(socket.id);
+        manager.unregisterSpectator(socket.id);
       }
       const room = manager.getRoomForSocket(socket.id);
-      if (room) socket.leave(room.id);
-      manager.leaveRoom(socket.id);
+      if (room) {
+        socket.leave(room.id);
+        manager.softDisconnect(socket.id);
+      }
       io2.emit("lobby_state", { tables: manager.getLobbyTables() });
     });
   });
@@ -67646,16 +68022,85 @@ router4.get("/social/blocks", requirePlayer, async (req, res) => {
 });
 var social_default = router4;
 
-// src/routes/index.ts
+// src/routes/bugs.ts
+var import_express5 = __toESM(require_express2(), 1);
+import { randomUUID as randomUUID4 } from "crypto";
 var router5 = (0, import_express5.Router)();
-router5.use(health_default);
-router5.use(auth_default);
-router5.use(admin_default);
-router5.use(social_default);
-var routes_default = router5;
+function requireAdmin2(req, res, next) {
+  const key = req.headers["x-admin-key"];
+  if (!key || key !== process.env["ADMIN_KEY"]) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  return next();
+}
+router5.post("/bug-reports", async (req, res) => {
+  const { category, title, description, deviceInfo, playerId, username } = req.body;
+  if (!title?.trim() || !description?.trim()) {
+    return res.status(400).json({ error: "Title and description are required" });
+  }
+  const id = randomUUID4();
+  try {
+    await db.insert(bugReportsTable).values({
+      id,
+      playerId: playerId || null,
+      username: username || "Anonymous",
+      category: category || "other",
+      title: title.trim(),
+      description: description.trim(),
+      deviceInfo: deviceInfo || {},
+      status: "open",
+      priority: "medium"
+    });
+    req.log?.info({ id, category }, "Bug report submitted");
+    return res.json({ ok: true, id });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to save bug report");
+    return res.status(500).json({ error: "Failed to submit bug report" });
+  }
+});
+router5.get("/admin/bug-reports", requireAdmin2, async (req, res) => {
+  const { status, category } = req.query;
+  try {
+    const all = await db.select().from(bugReportsTable).orderBy(desc(bugReportsTable.createdAt));
+    const filtered = all.filter((r) => {
+      if (status && status !== "all" && r.status !== status) return false;
+      if (category && category !== "all" && r.category !== category) return false;
+      return true;
+    });
+    return res.json({ reports: filtered });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to fetch bug reports");
+    return res.status(500).json({ error: "Failed to fetch bug reports" });
+  }
+});
+router5.patch("/admin/bug-reports/:id", requireAdmin2, async (req, res) => {
+  const { id } = req.params;
+  const { status, priority, adminNotes } = req.body;
+  const updates = { updatedAt: /* @__PURE__ */ new Date() };
+  if (status) updates["status"] = status;
+  if (priority) updates["priority"] = priority;
+  if (adminNotes !== void 0) updates["adminNotes"] = adminNotes;
+  try {
+    await db.update(bugReportsTable).set(updates).where(eq(bugReportsTable.id, id));
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to update bug report");
+    return res.status(500).json({ error: "Failed to update bug report" });
+  }
+});
+var bugs_default = router5;
+
+// src/routes/index.ts
+var router6 = (0, import_express6.Router)();
+router6.use(health_default);
+router6.use(auth_default);
+router6.use(admin_default);
+router6.use(social_default);
+router6.use(bugs_default);
+var routes_default = router6;
 
 // src/app.ts
-var app = (0, import_express6.default)();
+var app = (0, import_express7.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -67676,8 +68121,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express6.default.json());
-app.use(import_express6.default.urlencoded({ extended: true }));
+app.use(import_express7.default.json());
+app.use(import_express7.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 
@@ -67799,6 +68244,22 @@ async function runMigrations() {
         blocked_id  TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
         created_at  TIMESTAMPTZ DEFAULT NOW(),
         PRIMARY KEY (blocker_id, blocked_id)
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bug_reports (
+        id          TEXT PRIMARY KEY,
+        player_id   TEXT,
+        username    TEXT NOT NULL DEFAULT 'Anonymous',
+        category    TEXT NOT NULL DEFAULT 'other',
+        title       TEXT NOT NULL,
+        description TEXT NOT NULL,
+        device_info JSONB NOT NULL DEFAULT '{}',
+        status      TEXT NOT NULL DEFAULT 'open',
+        priority    TEXT NOT NULL DEFAULT 'medium',
+        admin_notes TEXT,
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ DEFAULT NOW()
       );
     `);
     logger.info("Startup migrations complete");
