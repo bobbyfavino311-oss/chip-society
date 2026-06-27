@@ -68108,7 +68108,7 @@ router4.get("/social/feed", requirePlayer, async (req, res) => {
 router4.post("/social/posts", requirePlayer, async (req, res) => {
   try {
     const { playerId } = req;
-    const { content, tag, pot, handRank } = req.body;
+    const { content, tag, pot, handRank, authorUsername, authorAvatarIndex, authorRank } = req.body;
     if (!content || typeof content !== "string" || !content.trim()) {
       res.status(400).json({ error: "content required" });
       return;
@@ -68131,9 +68131,9 @@ router4.post("/social/posts", requirePlayer, async (req, res) => {
     const post = {
       id: created.id,
       authorId: playerId,
-      authorUsername: author?.username ?? `player_${playerId.slice(0, 6)}`,
-      authorAvatarIndex: author?.profileJson?.avatarIndex ?? 1,
-      authorRank: author?.profileJson?.rank ?? "Neon Bronze",
+      authorUsername: author?.username ?? authorUsername ?? `player_${playerId.slice(0, 6)}`,
+      authorAvatarIndex: author?.profileJson?.avatarIndex ?? authorAvatarIndex ?? 1,
+      authorRank: author?.profileJson?.rank ?? authorRank ?? "Neon Bronze",
       content: created.content,
       tag: created.tag,
       pot: created.pot ?? null,
