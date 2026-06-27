@@ -68068,7 +68068,7 @@ router4.get("/social/feed", requirePlayer, async (req, res) => {
       createdAt: feedPostsTable.createdAt,
       authorUsername: playersTable.username,
       authorProfileJson: playersTable.profileJson
-    }).from(feedPostsTable).innerJoin(playersTable, eq(feedPostsTable.authorId, playersTable.playerId)).$dynamic();
+    }).from(feedPostsTable).leftJoin(playersTable, eq(feedPostsTable.authorId, playersTable.playerId)).$dynamic();
     if (tab === "me") {
       query = query.where(
         cursor ? and(eq(feedPostsTable.authorId, playerId), lt(feedPostsTable.createdAt, new Date(cursor))) : eq(feedPostsTable.authorId, playerId)
@@ -68087,7 +68087,7 @@ router4.get("/social/feed", requirePlayer, async (req, res) => {
     const posts = rows.map((r) => ({
       id: r.id,
       authorId: r.authorId,
-      authorUsername: r.authorUsername,
+      authorUsername: r.authorUsername ?? `player_${r.authorId.slice(0, 6)}`,
       authorAvatarIndex: r.authorProfileJson?.avatarIndex ?? 1,
       authorRank: r.authorProfileJson?.rank ?? "Neon Bronze",
       content: r.content,
@@ -68117,11 +68117,8 @@ router4.post("/social/posts", requirePlayer, async (req, res) => {
       res.status(400).json({ error: "Post too long (max 280 characters)" });
       return;
     }
-    const authorRow = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
-    if (!authorRow[0]) {
-      res.status(404).json({ error: "Player not found" });
-      return;
-    }
+    const authorRows = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
+    const author = authorRows[0] ?? null;
     const id = randomUUID3();
     const [created] = await db.insert(feedPostsTable).values({
       id,
@@ -68134,9 +68131,9 @@ router4.post("/social/posts", requirePlayer, async (req, res) => {
     const post = {
       id: created.id,
       authorId: playerId,
-      authorUsername: authorRow[0].username,
-      authorAvatarIndex: authorRow[0].profileJson?.avatarIndex ?? 1,
-      authorRank: authorRow[0].profileJson?.rank ?? "Neon Bronze",
+      authorUsername: author?.username ?? `player_${playerId.slice(0, 6)}`,
+      authorAvatarIndex: author?.profileJson?.avatarIndex ?? 1,
+      authorRank: author?.profileJson?.rank ?? "Neon Bronze",
       content: created.content,
       tag: created.tag,
       pot: created.pot ?? null,
