@@ -65966,7 +65966,7 @@ var blocksTable = pgTable("blocks", {
 }, (t) => [primaryKey({ columns: [t.blockerId, t.blockedId] })]);
 var feedPostsTable = pgTable("feed_posts", {
   id: text("id").primaryKey(),
-  authorId: text("author_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull(),
   content: text("content").notNull(),
   tag: text("tag").notNull().default("WIN"),
   pot: text("pot"),
@@ -65977,13 +65977,13 @@ var feedPostsTable = pgTable("feed_posts", {
 });
 var postLikesTable = pgTable("post_likes", {
   postId: text("post_id").notNull().references(() => feedPostsTable.id, { onDelete: "cascade" }),
-  playerId: text("player_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  playerId: text("player_id").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 }, (t) => [primaryKey({ columns: [t.postId, t.playerId] })]);
 var postCommentsTable = pgTable("post_comments", {
   id: text("id").primaryKey(),
   postId: text("post_id").notNull().references(() => feedPostsTable.id, { onDelete: "cascade" }),
-  authorId: text("author_id").notNull().references(() => playersTable.playerId, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull(),
   text: text("text").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
