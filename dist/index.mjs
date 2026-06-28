@@ -65865,6 +65865,7 @@ function drizzle(...params) {
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  announcementsTable: () => announcementsTable,
   blocksTable: () => blocksTable,
   bugReportsTable: () => bugReportsTable,
   chipTransactionsTable: () => chipTransactionsTable,
@@ -65973,6 +65974,9 @@ var feedPostsTable = pgTable("feed_posts", {
   handRank: text("hand_rank"),
   likeCount: integer("like_count").notNull().default(0),
   commentCount: integer("comment_count").notNull().default(0),
+  authorUsername: text("author_username"),
+  authorAvatarIndex: integer("author_avatar_index"),
+  authorRank: text("author_rank"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 var postLikesTable = pgTable("post_likes", {
@@ -66000,6 +66004,14 @@ var bugReportsTable = pgTable("bug_reports", {
   adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+var announcementsTable = pgTable("announcements", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  postedBy: text("posted_by").notNull().default("Dev Team"),
+  pinned: boolean("pinned").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
 // ../../lib/db/src/index.ts
@@ -66157,7 +66169,14 @@ router2.put("/auth/profile", async (req, res) => {
       res.status(400).json({ error: "playerId and profile are required." });
       return;
     }
-    await db.update(playersTable).set({ profileJson: profile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, playerId));
+    const existing = await db.select({ profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
+    const current = existing[0]?.profileJson ?? {};
+    const merged = {
+      ...profile,
+      // Preserve server-only flags — client cannot clear these
+      isFounder: current["isFounder"] ?? profile["isFounder"] ?? false
+    };
+    await db.update(playersTable).set({ profileJson: merged, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, playerId));
     res.json({ success: true });
   } catch (e) {
     req.log.error(e, "profile update error");
@@ -66301,6 +66320,148 @@ function getBestHand(holeCards, communityCards) {
   return best ?? { rank: 0, values: [], name: "High Card" };
 }
 
+// src/poker/botEngine.ts
+function preflopStrength(cards) {
+  if (cards.length !== 2) return 0.2;
+  const [a, b] = cards;
+  const hi = Math.max(a.value, b.value);
+  const lo = Math.min(a.value, b.value);
+  const gap = hi - lo;
+  const paired = hi === lo;
+  const suited = a.suit === b.suit;
+  const conn = gap <= 2;
+  if (paired && hi >= 14) return 1;
+  if (paired && hi >= 12) return 0.92;
+  if (paired && hi >= 10) return 0.82;
+  if (paired && hi >= 7) return 0.65;
+  if (paired) return 0.5;
+  if (hi === 14 && lo >= 13) return suited ? 0.9 : 0.85;
+  if (hi === 14 && lo >= 12) return suited ? 0.8 : 0.72;
+  if (hi === 14 && lo >= 11) return suited ? 0.72 : 0.64;
+  if (hi === 14 && lo >= 10) return suited ? 0.67 : 0.58;
+  if (hi === 13 && lo >= 12) return suited ? 0.72 : 0.64;
+  if (hi >= 10 && lo >= 10) return suited ? 0.62 : 0.55;
+  if (suited && conn && hi >= 9) return 0.55;
+  if (suited && hi >= 12) return 0.48;
+  if (conn && hi >= 8) return 0.4;
+  if (suited) return 0.35;
+  return 0.2;
+}
+function postflopStrength(holeCards, community) {
+  const all = [...holeCards, ...community];
+  const vals = all.map((c) => c.value);
+  const suits = all.map((c) => c.suit);
+  const freq = {};
+  for (const v of vals) freq[v] = (freq[v] ?? 0) + 1;
+  const counts = Object.values(freq).sort((a, b) => b - a);
+  const suitFreq = {};
+  for (const s of suits) suitFreq[s] = (suitFreq[s] ?? 0) + 1;
+  const maxSuit = Math.max(...Object.values(suitFreq));
+  const hasFlush = maxSuit >= 5;
+  const hasFlushDraw = maxSuit >= 4 && community.length < 5;
+  const uniq = [...new Set(vals)].sort((a, b) => a - b);
+  let maxRun = 1, run = 1;
+  for (let i = 1; i < uniq.length; i++) {
+    run = uniq[i] - uniq[i - 1] === 1 ? run + 1 : 1;
+    if (run > maxRun) maxRun = run;
+  }
+  const hasStraight = maxRun >= 5;
+  const hasStraightDraw = maxRun >= 4 && community.length < 5;
+  if (hasFlush && hasStraight) return 0.98;
+  if (hasFlush) return 0.9;
+  if (hasStraight) return 0.85;
+  if (counts[0] >= 4) return 0.97;
+  if (counts[0] >= 3 && counts[1] >= 2) return 0.92;
+  if (counts[0] >= 3) return 0.75;
+  if (counts[0] >= 2 && counts[1] >= 2) return 0.6;
+  if (counts[0] >= 2) return 0.4;
+  if (hasFlushDraw || hasStraightDraw) return 0.35;
+  const base = preflopStrength(holeCards);
+  return base * 0.85;
+}
+function decideBotAction(params) {
+  const {
+    difficulty,
+    holeCards,
+    communityCards,
+    toCall,
+    chips,
+    minRaise,
+    bigBlind,
+    potSize,
+    isPreflop,
+    position
+  } = params;
+  const strength = isPreflop ? preflopStrength(holeCards) : postflopStrength(holeCards, communityCards);
+  const jitter = (Math.random() - 0.5) * 0.1;
+  const eff = Math.max(0, Math.min(1, strength + jitter));
+  const canCheck = toCall === 0;
+  const potOdds = toCall > 0 ? toCall / (potSize + toCall) : 0;
+  if (difficulty === "ROOKIE") {
+    if (eff > 0.78) {
+      const rAmt = Math.min(chips, minRaise + bigBlind * Math.floor(Math.random() * 3));
+      return chips <= minRaise ? { type: "allin" } : { type: "raise", amount: rAmt };
+    }
+    if (eff > 0.45 || canCheck) {
+      return toCall === 0 ? { type: "check" } : { type: "call" };
+    }
+    return { type: "fold" };
+  }
+  if (difficulty === "SOLID") {
+    const posBonus2 = position === "late" ? 0.07 : position === "middle" ? 0.03 : 0;
+    const adjEff2 = eff + posBonus2;
+    if (adjEff2 > 0.85) {
+      const rAmt = Math.min(chips, minRaise + Math.floor(potSize * 0.6));
+      return chips <= minRaise ? { type: "allin" } : { type: "raise", amount: rAmt };
+    }
+    if (adjEff2 > potOdds + 0.1 || canCheck && adjEff2 > 0.3) {
+      return toCall === 0 ? { type: "check" } : { type: "call" };
+    }
+    if (adjEff2 > 0.3 && canCheck) return { type: "check" };
+    return { type: "fold" };
+  }
+  const posBonus = position === "late" ? 0.12 : position === "middle" ? 0.06 : 0;
+  const adjEff = eff + posBonus;
+  if (position === "late" && !isPreflop && Math.random() < 0.18 && canCheck) {
+    const rAmt = Math.min(chips, minRaise + Math.floor(potSize * 0.5));
+    return chips <= minRaise ? { type: "allin" } : { type: "raise", amount: rAmt };
+  }
+  if (adjEff > 0.8) {
+    const mult = adjEff > 0.92 ? 1 : 0.65;
+    const rAmt = Math.min(chips, minRaise + Math.floor(potSize * mult));
+    return chips <= minRaise ? { type: "allin" } : { type: "raise", amount: rAmt };
+  }
+  if (adjEff > potOdds + 0.05 || canCheck && adjEff > 0.25) {
+    return toCall === 0 ? { type: "check" } : { type: "call" };
+  }
+  return { type: "fold" };
+}
+var BOT_ROSTER = [
+  { username: "RoboShark", avatarId: 11, difficulty: "SHARK" },
+  { username: "ChipBot_99", avatarId: 9, difficulty: "SOLID" },
+  { username: "FoldMaster", avatarId: 13, difficulty: "ROOKIE" },
+  { username: "VegasBot", avatarId: 7, difficulty: "SOLID" },
+  { username: "BluffAI", avatarId: 15, difficulty: "SHARK" },
+  { username: "SafePlay", avatarId: 12, difficulty: "ROOKIE" },
+  { username: "CardBot", avatarId: 6, difficulty: "SOLID" },
+  { username: "MidnightBot", avatarId: 10, difficulty: "SHARK" }
+];
+function pickBot(seated) {
+  const available = BOT_ROSTER.filter((b) => !seated.has(b.username));
+  const template = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : BOT_ROSTER[Math.floor(Math.random() * BOT_ROSTER.length)];
+  const suffix = Math.floor(Math.random() * 900 + 100);
+  return {
+    ...template,
+    userId: `bot_${template.username.toLowerCase()}_${suffix}`,
+    username: `${template.username}`
+  };
+}
+function botBuyIn(config) {
+  const bb = config.bigBlind;
+  const target = bb * (50 + Math.floor(Math.random() * 30));
+  return Math.min(Math.max(target, config.minBuyIn), config.maxBuyIn);
+}
+
 // src/poker/room.ts
 var TURN_TIMEOUT_MS = 3e4;
 var SHOWDOWN_DELAY_MS = 5e3;
@@ -66361,6 +66522,78 @@ var PokerRoom = class {
     this.broadcastState();
     this.maybeScheduleHandStart();
     return emptyIdx;
+  }
+  // ─── Bot management ───────────────────────────────────────────────────────
+  /** Add a bot to an empty seat. Returns the seat index, or -1 if table is full. */
+  addBot(profile, chips) {
+    const emptyIdx = this.seats.findIndex((s) => s === null);
+    if (emptyIdx === -1) return -1;
+    const socketId = `bot_${profile.userId}`;
+    this.seats[emptyIdx] = {
+      socketId,
+      userId: profile.userId,
+      username: profile.username,
+      avatarId: profile.avatarId,
+      chips,
+      startingChips: chips,
+      cards: [],
+      currentBet: 0,
+      totalBet: 0,
+      status: "active"
+    };
+    this.addMessage(`${profile.username} joined the table`, "info");
+    this.broadcastState();
+    this.maybeScheduleHandStart();
+    return emptyIdx;
+  }
+  isBotSeat(seatIdx) {
+    const seat = this.seats[seatIdx];
+    return seat?.socketId.startsWith("bot_") ?? false;
+  }
+  getBotIds() {
+    return this.seats.filter((s) => s?.socketId.startsWith("bot_")).map((s) => s.userId);
+  }
+  /** Remove all bots. Called when enough real players have joined. */
+  removeBotsWhenFull() {
+  }
+  /**
+   * Fire bot decisions for the active seat if it belongs to a bot.
+   * Called by RoomManager after every broadcastState if activeSeat is a bot.
+   */
+  triggerBotTurn() {
+    if (this.phase === "waiting" || this.phase === "showdown") return;
+    const idx = this.activeSeat;
+    if (idx < 0 || !this.isBotSeat(idx)) return;
+    const seat = this.seats[idx];
+    if (!seat || seat.status !== "active") return;
+    const uid = seat.userId;
+    const diff = uid.includes("robo") || uid.includes("bluff") || uid.includes("midnight") ? "SHARK" : uid.includes("fold") || uid.includes("safe") ? "ROOKIE" : "SOLID";
+    const position = idx < this.config.maxPlayers / 3 ? "early" : idx < this.config.maxPlayers * 2 / 3 ? "middle" : "late";
+    const toCall = Math.min(
+      Math.max(0, this.currentBet - seat.currentBet),
+      seat.chips
+    );
+    const decision = decideBotAction({
+      difficulty: diff,
+      holeCards: seat.cards,
+      communityCards: this.communityCards,
+      toCall,
+      chips: seat.chips,
+      currentBet: this.currentBet,
+      minRaise: this.currentBet + this.config.bigBlind,
+      bigBlind: this.config.bigBlind,
+      potSize: this.pot,
+      isPreflop: this.phase === "preflop",
+      position
+    });
+    const delay = 300 + Math.floor(Math.random() * 600);
+    setTimeout(() => {
+      if (this.activeSeat !== idx || !this.isBotSeat(idx)) return;
+      const s = this.seats[idx];
+      if (!s || s.status !== "active") return;
+      this.clearTurnTimer();
+      this.handleAction(seat.socketId, decision);
+    }, delay);
   }
   // ─── Soft disconnect (60 s reconnect window, handled by RoomManager) ──────
   /**
@@ -66904,7 +67137,7 @@ var PokerRoom = class {
   }
   broadcastState() {
     for (const seat of this.seats) {
-      if (seat && !seat.isDisconnected) {
+      if (seat && !seat.isDisconnected && !seat.socketId.startsWith("bot_")) {
         const state = this.getClientStateFor(seat.socketId);
         this.emit(seat.socketId, "game_state", state);
       }
@@ -66913,6 +67146,9 @@ var PokerRoom = class {
       this.emit(sid, "game_state", this.getClientStateFor(sid));
     }
     this.broadcast(this.id, "lobby_update", null);
+    if (this.activeSeat >= 0 && this.isBotSeat(this.activeSeat)) {
+      this.triggerBotTurn();
+    }
   }
 };
 
@@ -67047,6 +67283,37 @@ var RoomManager = class {
       }
     }
     return this.createRoom(stakeTier, maxPlayers);
+  }
+  /**
+   * Fill empty seats with bots after a delay.
+   * Called when a real player joins and the room still needs more players.
+   * Bots are added immediately (one bot) so the game starts quickly, then
+   * optionally more bots fill remaining empty seats.
+   *
+   * @param room        The room to fill
+   * @param targetCount Desired total player count (capped at maxPlayers)
+   * @param delayMs     How long to wait before adding the first bot (default 8 s)
+   */
+  scheduleBotFill(room, targetCount = 3, delayMs = 8e3) {
+    const roomId = room.id;
+    const doFill = () => {
+      const r = this.rooms.get(roomId);
+      if (!r) return;
+      const currentCount = r.playerCount;
+      if (currentCount >= targetCount) return;
+      const seated = new Set(
+        r.seats.filter(Boolean).map((s) => s.username)
+      );
+      const toAdd = Math.min(targetCount - currentCount, r.config.maxPlayers - currentCount);
+      for (let i = 0; i < toAdd; i++) {
+        const bot = pickBot(seated);
+        const chips = botBuyIn(r.config);
+        const idx = r.addBot(bot, chips);
+        if (idx === -1) break;
+        seated.add(bot.username);
+      }
+    };
+    setTimeout(doFill, delayMs);
   }
   getLobbyTables() {
     return [...this.rooms.values()].map((r) => r.getLobbyInfo()).sort((a, b) => a.smallBlind - b.smallBlind);
@@ -67211,6 +67478,7 @@ function setupSocketIO(httpServer2) {
         socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
         logger.info({ roomId: room.id, socketId: socket.id, userId: payload.userId }, "Table created");
+        manager.scheduleBotFill(room, 3, 8e3);
       } catch (e) {
         logger.error({ err: e }, "create_table error");
         socket.emit("error", { message: "Failed to create table." });
@@ -67279,6 +67547,8 @@ function setupSocketIO(httpServer2) {
         socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
         logger.info({ roomId: room.id, userId: payload.userId, tier }, "Quick join");
+        const realCount = room.seats.filter((s) => s && !s.socketId.startsWith("bot_")).length;
+        if (realCount < 2) manager.scheduleBotFill(room, 3, 8e3);
       } catch (e) {
         logger.error({ err: e }, "quick_join error");
         socket.emit("error", { message: "Quick join failed. Please try again." });
@@ -67609,6 +67879,20 @@ router3.post("/admin/players/:id/unban", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+router3.post("/admin/players/:id/unwarn", async (req, res) => {
+  try {
+    const pid = req.params["id"];
+    await db.update(playersTable).set({ status: "active", banReason: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    const actionId = randomUUID2();
+    await db.insert(moderationActionsTable).values({ id: actionId, playerId: pid, adminId: "admin", type: "unban", reason: "Warning cleared by admin", message: null });
+    emitToPlayer(pid, "player_unbanned", { timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+    req.log.info({ playerId: pid }, "player warning cleared");
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/unwarn error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
 router3.get("/admin/moderation", async (req, res) => {
   try {
     const rows = await db.select().from(moderationActionsTable).orderBy(desc(moderationActionsTable.createdAt)).limit(200);
@@ -67734,6 +68018,72 @@ router3.post("/players/:id/notifications/read", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+router3.put("/admin/players/:id/founder", async (req, res) => {
+  try {
+    const { isFounder } = req.body;
+    const pid = req.params["id"];
+    const rows = await db.select({ profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, pid)).limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Player not found" });
+      return;
+    }
+    const updated = { ...rows[0].profileJson, isFounder };
+    await db.update(playersTable).set({ profileJson: updated, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, pid));
+    req.log.info({ playerId: pid, isFounder }, "founder badge toggled");
+    res.json({ success: true, isFounder });
+  } catch (e) {
+    req.log.error(e, "admin/founder error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/announcements", async (req, res) => {
+  try {
+    const rows = await db.select().from(announcementsTable).orderBy(desc(announcementsTable.createdAt));
+    res.json({ announcements: rows });
+  } catch (e) {
+    req.log.error(e, "announcements/get error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.get("/admin/announcements", async (req, res) => {
+  try {
+    const rows = await db.select().from(announcementsTable).orderBy(desc(announcementsTable.createdAt));
+    res.json({ announcements: rows });
+  } catch (e) {
+    req.log.error(e, "admin/announcements/get error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.post("/admin/announcements", async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title?.trim() || !body?.trim()) {
+      res.status(400).json({ error: "title and body are required" });
+      return;
+    }
+    const id = randomUUID2();
+    await db.insert(announcementsTable).values({
+      id,
+      title: title.trim(),
+      body: body.trim(),
+      postedBy: "Dev Team",
+      pinned: true
+    });
+    res.json({ success: true, id });
+  } catch (e) {
+    req.log.error(e, "admin/announcements/post error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+router3.delete("/admin/announcements/:id", async (req, res) => {
+  try {
+    await db.delete(announcementsTable).where(eq(announcementsTable.id, req.params["id"]));
+    res.json({ success: true });
+  } catch (e) {
+    req.log.error(e, "admin/announcements/delete error");
+    res.status(500).json({ error: "Server error" });
+  }
+});
 var admin_default = router3;
 
 // src/routes/social.ts
@@ -67782,7 +68132,7 @@ router4.get("/social/search", async (req, res) => {
       level: r.profileJson?.level ?? 1,
       chips: r.profileJson?.chips ?? 0,
       avatarIndex: r.profileJson?.avatarIndex ?? 1,
-      rank: r.profileJson?.rank ?? "Neon Bronze",
+      rank: r.profileJson?.rank ?? "Player",
       status: r.status
     }));
     res.json({ players });
@@ -67801,6 +68151,8 @@ router4.get("/social/players/:id", async (req, res) => {
     }
     const r = rows[0];
     const pj = r.profileJson;
+    const [followerRow] = await db.select({ count: sql`count(*)::int` }).from(followsTable).where(eq(followsTable.followingId, id));
+    const [followingRow] = await db.select({ count: sql`count(*)::int` }).from(followsTable).where(eq(followsTable.followerId, id));
     res.json({
       player: {
         playerId: r.playerId,
@@ -67808,10 +68160,12 @@ router4.get("/social/players/:id", async (req, res) => {
         level: pj?.level ?? 1,
         chips: pj?.chips ?? 0,
         avatarIndex: pj?.avatarIndex ?? 1,
-        rank: pj?.rank ?? "Neon Bronze",
+        rank: pj?.rank ?? "Player",
         winRate: pj?.winRate ?? 0,
         handsPlayed: pj?.handsPlayed ?? 0,
-        status: r.status
+        status: r.status,
+        followerCount: followerRow?.count ?? 0,
+        followingCount: followingRow?.count ?? 0
       }
     });
   } catch (e) {
@@ -68066,9 +68420,10 @@ router4.get("/social/feed", requirePlayer, async (req, res) => {
       likeCount: feedPostsTable.likeCount,
       commentCount: feedPostsTable.commentCount,
       createdAt: feedPostsTable.createdAt,
-      authorUsername: playersTable.username,
-      authorProfileJson: playersTable.profileJson
-    }).from(feedPostsTable).leftJoin(playersTable, eq(feedPostsTable.authorId, playersTable.playerId)).$dynamic();
+      authorUsername: feedPostsTable.authorUsername,
+      authorAvatarIndex: feedPostsTable.authorAvatarIndex,
+      authorRank: feedPostsTable.authorRank
+    }).from(feedPostsTable).$dynamic();
     if (tab === "me") {
       query = query.where(
         cursor ? and(eq(feedPostsTable.authorId, playerId), lt(feedPostsTable.createdAt, new Date(cursor))) : eq(feedPostsTable.authorId, playerId)
@@ -68088,8 +68443,8 @@ router4.get("/social/feed", requirePlayer, async (req, res) => {
       id: r.id,
       authorId: r.authorId,
       authorUsername: r.authorUsername ?? `player_${r.authorId.slice(0, 6)}`,
-      authorAvatarIndex: r.authorProfileJson?.avatarIndex ?? 1,
-      authorRank: r.authorProfileJson?.rank ?? "Neon Bronze",
+      authorAvatarIndex: r.authorAvatarIndex ?? 1,
+      authorRank: r.authorRank ?? "Player",
       content: r.content,
       tag: r.tag,
       pot: r.pot ?? null,
@@ -68119,6 +68474,9 @@ router4.post("/social/posts", requirePlayer, async (req, res) => {
     }
     const authorRows = await db.select({ username: playersTable.username, profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, playerId)).limit(1);
     const author = authorRows[0] ?? null;
+    const resolvedUsername = authorUsername ?? author?.username ?? `player_${playerId.slice(0, 6)}`;
+    const resolvedAvatarIndex = authorAvatarIndex ?? author?.profileJson?.avatarIndex ?? 1;
+    const resolvedRank = authorRank ?? author?.profileJson?.rank ?? "Player";
     const id = randomUUID3();
     const [created] = await db.insert(feedPostsTable).values({
       id,
@@ -68126,14 +68484,17 @@ router4.post("/social/posts", requirePlayer, async (req, res) => {
       content: content.trim(),
       tag: tag ?? "WIN",
       pot: pot?.trim() || null,
-      handRank: handRank?.trim() || null
+      handRank: handRank?.trim() || null,
+      authorUsername: resolvedUsername,
+      authorAvatarIndex: resolvedAvatarIndex,
+      authorRank: resolvedRank
     }).returning();
     const post = {
       id: created.id,
       authorId: playerId,
-      authorUsername: author?.username ?? authorUsername ?? `player_${playerId.slice(0, 6)}`,
-      authorAvatarIndex: author?.profileJson?.avatarIndex ?? authorAvatarIndex ?? 1,
-      authorRank: author?.profileJson?.rank ?? authorRank ?? "Neon Bronze",
+      authorUsername: created.authorUsername ?? resolvedUsername,
+      authorAvatarIndex: created.authorAvatarIndex ?? resolvedAvatarIndex,
+      authorRank: created.authorRank ?? resolvedRank,
       content: created.content,
       tag: created.tag,
       pot: created.pot ?? null,
@@ -68165,7 +68526,18 @@ router4.post("/social/posts/:id/like", requirePlayer, async (req, res) => {
       await db.update(feedPostsTable).set({ likeCount: sql`${feedPostsTable.likeCount} + 1` }).where(eq(feedPostsTable.id, postId));
       liked = true;
     }
-    const [updated] = await db.select({ likeCount: feedPostsTable.likeCount }).from(feedPostsTable).where(eq(feedPostsTable.id, postId)).limit(1);
+    const [updated] = await db.select({ likeCount: feedPostsTable.likeCount, authorId: feedPostsTable.authorId }).from(feedPostsTable).where(eq(feedPostsTable.id, postId)).limit(1);
+    if (liked && updated?.authorId && updated.authorId !== playerId) {
+      db.insert(playerNotificationsTable).values({
+        notificationId: randomUUID3(),
+        playerId: updated.authorId,
+        type: "like",
+        title: "Someone liked your post",
+        reason: "post_like",
+        amount: 0
+      }).catch(() => {
+      });
+    }
     res.json({ liked, likeCount: updated?.likeCount ?? 0 });
   } catch (e) {
     req.log.error(e, "like toggle error");
@@ -68535,6 +68907,21 @@ async function runMigrations() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS post_comments_post_idx ON post_comments(post_id, created_at);
+    `);
+    await client.query(`
+      ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS author_username    TEXT;
+      ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS author_avatar_index INTEGER DEFAULT 1;
+      ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS author_rank        TEXT DEFAULT 'Player';
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id         TEXT PRIMARY KEY,
+        title      TEXT NOT NULL,
+        body       TEXT NOT NULL,
+        posted_by  TEXT NOT NULL DEFAULT 'Dev Team',
+        pinned     BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
     logger.info("Startup migrations complete");
   } catch (err) {
