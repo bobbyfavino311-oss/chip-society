@@ -67433,7 +67433,13 @@ function setupSocketIO(httpServer2) {
   };
   const manager = new RoomManager(emit, broadcast, onChipSync);
   io2.on("connection", (socket) => {
-    logger.info({ socketId: socket.id }, "Socket connected");
+    logger.info({ socketId: socket.id, transport: socket.conn.transport.name }, "Socket connected");
+    socket.conn.on("upgrade", (transport) => {
+      logger.info({ socketId: socket.id, transport: transport.name }, "Socket transport upgraded");
+    });
+    socket.on("disconnect", (reason) => {
+      logger.info({ socketId: socket.id, reason, transport: socket.conn.transport.name }, "Socket disconnected (reason)");
+    });
     socket.on("register_player", (payload) => {
       const { playerId } = payload;
       if (!playerId) return;
