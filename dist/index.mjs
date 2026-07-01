@@ -20600,27 +20600,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router7;
+    module.exports = Router8;
     module.exports.Route = Route;
-    function Router7(options) {
-      if (!(this instanceof Router7)) {
-        return new Router7(options);
+    function Router8(options) {
+      if (!(this instanceof Router8)) {
+        return new Router8(options);
       }
       const opts = options || {};
-      function router7(req, res, next) {
-        router7.handle(req, res, next);
+      function router8(req, res, next) {
+        router8.handle(req, res, next);
       }
-      Object.setPrototypeOf(router7, this);
-      router7.caseSensitive = opts.caseSensitive;
-      router7.mergeParams = opts.mergeParams;
-      router7.params = {};
-      router7.strict = opts.strict;
-      router7.stack = [];
-      return router7;
+      Object.setPrototypeOf(router8, this);
+      router8.caseSensitive = opts.caseSensitive;
+      router8.mergeParams = opts.mergeParams;
+      router8.params = {};
+      router8.strict = opts.strict;
+      router8.stack = [];
+      return router8;
     }
-    Router7.prototype = function() {
+    Router8.prototype = function() {
     };
-    Router7.prototype.param = function param(name, fn) {
+    Router8.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20640,7 +20640,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router7.prototype.handle = function handle(req, res, callback) {
+    Router8.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20767,7 +20767,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router7.prototype.use = function use(handler) {
+    Router8.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -20800,7 +20800,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router7.prototype.route = function route(path) {
+    Router8.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20815,7 +20815,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router7.prototype[method] = function(path) {
+      Router8.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20998,13 +20998,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router7 = null;
+      var router8 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21013,13 +21013,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router7 === null) {
-            router7 = new Router7({
+          if (router8 === null) {
+            router8 = new Router8({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router7;
+          return router8;
         }
       });
     };
@@ -21090,15 +21090,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router7 = this.router;
+      var router8 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router7.use(path, fn2);
+          return router8.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router7.use(path, function mounted_app(req, res, next) {
+        router8.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23625,7 +23625,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23647,8 +23647,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router7.Route;
-    exports.Router = Router7;
+    exports.Route = Router8.Route;
+    exports.Router = Router8;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -54992,12 +54992,12 @@ var require_dist4 = __commonJS({
 import { createServer } from "http";
 
 // src/app.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -65878,7 +65878,8 @@ __export(schema_exports, {
   playerReportsTable: () => playerReportsTable,
   playersTable: () => playersTable,
   postCommentsTable: () => postCommentsTable,
-  postLikesTable: () => postLikesTable
+  postLikesTable: () => postLikesTable,
+  referralsTable: () => referralsTable
 });
 var playersTable = pgTable("players", {
   playerId: text("player_id").primaryKey(),
@@ -66004,6 +66005,14 @@ var bugReportsTable = pgTable("bug_reports", {
   adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+var referralsTable = pgTable("referrals", {
+  referralId: text("referral_id").primaryKey(),
+  referrerId: text("referrer_id").notNull().references(() => playersTable.playerId),
+  refereeId: text("referee_id").notNull().unique().references(() => playersTable.playerId),
+  referrerBonus: integer("referrer_bonus").notNull(),
+  refereeBonus: integer("referee_bonus").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 var announcementsTable = pgTable("announcements", {
   id: text("id").primaryKey(),
@@ -66466,6 +66475,11 @@ function botBuyIn(config) {
 var TURN_TIMEOUT_MS = 3e4;
 var SHOWDOWN_DELAY_MS = 5e3;
 var HAND_START_DELAY_MS = 3e3;
+var BOT_DELAY_MS = {
+  ROOKIE: [1800, 3500],
+  SOLID: [1300, 2800],
+  SHARK: [1e3, 2200]
+};
 var PokerRoom = class {
   id;
   config;
@@ -66488,13 +66502,13 @@ var PokerRoom = class {
   emit;
   broadcast;
   onChipSync;
-  constructor(id, config, emit, broadcast, onChipSync2) {
+  constructor(id, config, emit, broadcast, onChipSync) {
     this.id = id;
     this.config = config;
     this.seats = new Array(config.maxPlayers).fill(null);
     this.emit = emit;
     this.broadcast = broadcast;
-    this.onChipSync = onChipSync2 ?? null;
+    this.onChipSync = onChipSync ?? null;
   }
   // ─── Player management ────────────────────────────────────────────────────
   findSeatBySocketId(socketId) {
@@ -66586,7 +66600,8 @@ var PokerRoom = class {
       isPreflop: this.phase === "preflop",
       position
     });
-    const delay = 300 + Math.floor(Math.random() * 600);
+    const [minDelay, maxDelay] = BOT_DELAY_MS[diff];
+    const delay = minDelay + Math.floor(Math.random() * (maxDelay - minDelay));
     setTimeout(() => {
       if (this.activeSeat !== idx || !this.isBotSeat(idx)) return;
       const s = this.seats[idx];
@@ -67165,10 +67180,10 @@ var STAKE_CONFIG = {
 // src/poker/roomManager.ts
 var RoomManager = class {
   // userId → timer
-  constructor(emit, broadcast, onChipSync2) {
+  constructor(emit, broadcast, onChipSync) {
     this.emit = emit;
     this.broadcast = broadcast;
-    this.onChipSync = onChipSync2;
+    this.onChipSync = onChipSync;
   }
   rooms = /* @__PURE__ */ new Map();
   socketRoom = /* @__PURE__ */ new Map();
@@ -67360,7 +67375,6 @@ var logger = (0, import_pino.default)({
 // src/sockets/index.ts
 var playerSockets = /* @__PURE__ */ new Map();
 var socketPlayers = /* @__PURE__ */ new Map();
-var sessionStartChips = /* @__PURE__ */ new Map();
 var _io = null;
 function emitToAll(event, data) {
   if (!_io) return;
@@ -67387,37 +67401,6 @@ async function loadPlayerChips(userId) {
     return null;
   }
 }
-async function syncChipsToDb(userId, newChips) {
-  try {
-    const startChips = sessionStartChips.get(userId);
-    if (startChips === void 0) return;
-    const delta = newChips - startChips;
-    if (delta === 0) return;
-    const rows = await db.select({ profileJson: playersTable.profileJson }).from(playersTable).where(eq(playersTable.playerId, userId)).limit(1);
-    if (!rows.length) return;
-    const updated = { ...rows[0].profileJson, chips: newChips };
-    await db.update(playersTable).set({ profileJson: updated, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, userId));
-    await db.insert(chipTransactionsTable).values({
-      txId: `mp_${userId}_${Date.now()}`,
-      playerId: userId,
-      type: delta > 0 ? "multiplayer_win" : "multiplayer_loss",
-      amount: Math.abs(delta),
-      balanceAfter: newChips,
-      note: "Multiplayer hand result"
-    });
-    sessionStartChips.set(userId, newChips);
-    logger.info({ userId, delta, newChips }, "Chip sync complete");
-  } catch (e) {
-    logger.error({ err: e, userId }, "Chip sync failed");
-  }
-}
-var onChipSync = (seats) => {
-  for (const { userId, chips } of seats) {
-    syncChipsToDb(userId, chips).catch(
-      (e) => logger.error({ err: e, userId }, "syncChipsToDb unhandled rejection")
-    );
-  }
-};
 function setupSocketIO(httpServer2) {
   const io2 = new Server(httpServer2, {
     path: "/api/socket.io",
@@ -67431,7 +67414,7 @@ function setupSocketIO(httpServer2) {
   const broadcast = (roomId, _event, _data) => {
     io2.emit("lobby_state", { tables: manager.getLobbyTables() });
   };
-  const manager = new RoomManager(emit, broadcast, onChipSync);
+  const manager = new RoomManager(emit, broadcast);
   io2.on("connection", (socket) => {
     logger.info({ socketId: socket.id, transport: socket.conn.transport.name }, "Socket connected");
     socket.conn.on("upgrade", (transport) => {
@@ -67479,7 +67462,6 @@ function setupSocketIO(httpServer2) {
           socket.emit("error", { message: "Insufficient chips for this stake level." });
           return;
         }
-        sessionStartChips.set(payload.userId, chips);
         socket.join(room.id);
         socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
@@ -67512,7 +67494,6 @@ function setupSocketIO(httpServer2) {
           return;
         }
         const room = manager.getRoom(payload.tableId);
-        sessionStartChips.set(payload.userId, chips);
         socket.join(payload.tableId);
         socket.emit("joined_table", { tableId: payload.tableId, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
@@ -67548,7 +67529,6 @@ function setupSocketIO(httpServer2) {
           socket.emit("error", { message: "Could not find a suitable table. Try a different stake level." });
           return;
         }
-        sessionStartChips.set(payload.userId, dbChips);
         socket.join(room.id);
         socket.emit("joined_table", { tableId: room.id, state: room.getClientStateFor(socket.id) });
         io2.emit("lobby_state", { tables: manager.getLobbyTables() });
@@ -68647,7 +68627,7 @@ import { randomUUID as randomUUID4 } from "crypto";
 var router5 = (0, import_express5.Router)();
 function requireAdmin2(req, res, next) {
   const key = req.headers["x-admin-key"];
-  if (!key || key !== process.env["ADMIN_KEY"]) {
+  if (!key || key !== process.env["ADMIN_SECRET"]) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   return next();
@@ -68709,17 +68689,116 @@ router5.patch("/admin/bug-reports/:id", requireAdmin2, async (req, res) => {
 });
 var bugs_default = router5;
 
-// src/routes/index.ts
+// src/routes/referrals.ts
+var import_express6 = __toESM(require_express2(), 1);
+import { randomUUID as randomUUID5 } from "crypto";
 var router6 = (0, import_express6.Router)();
-router6.use(health_default);
-router6.use(auth_default);
-router6.use(admin_default);
-router6.use(social_default);
-router6.use(bugs_default);
-var routes_default = router6;
+var REFERRER_BONUS = 1e4;
+var REFEREE_BONUS = 5e3;
+router6.get("/referrals/lookup", async (req, res) => {
+  const { username } = req.query;
+  if (!username?.trim()) {
+    return res.status(400).json({ error: "username query param required." });
+  }
+  try {
+    const rows = await db.select({ playerId: playersTable.playerId, username: playersTable.username, status: playersTable.status }).from(playersTable).where(eq(playersTable.usernameLower, username.trim().toLowerCase())).limit(1);
+    if (rows.length === 0 || rows[0].status === "banned") {
+      return res.json({ valid: false });
+    }
+    return res.json({ valid: true, referrerUsername: rows[0].username });
+  } catch (err) {
+    req.log?.error({ err }, "referral lookup failed");
+    return res.status(500).json({ error: "Server error." });
+  }
+});
+router6.post("/referrals/claim", async (req, res) => {
+  const { refereeId, referrerUsername } = req.body;
+  if (!refereeId || !referrerUsername?.trim()) {
+    return res.status(400).json({ error: "refereeId and referrerUsername are required." });
+  }
+  try {
+    const refereeRows = await db.select().from(playersTable).where(eq(playersTable.playerId, refereeId)).limit(1);
+    if (refereeRows.length === 0) return res.status(404).json({ error: "Referee not found." });
+    const referee = refereeRows[0];
+    const referrerRows = await db.select().from(playersTable).where(eq(playersTable.usernameLower, referrerUsername.trim().toLowerCase())).limit(1);
+    if (referrerRows.length === 0) return res.status(404).json({ error: "Invite code not found." });
+    const referrer = referrerRows[0];
+    if (referrer.playerId === referee.playerId) {
+      return res.status(400).json({ error: "You cannot use your own invite code." });
+    }
+    const existing = await db.select().from(referralsTable).where(eq(referralsTable.refereeId, refereeId)).limit(1);
+    if (existing.length > 0) {
+      return res.status(409).json({ error: "A referral bonus has already been claimed on this account." });
+    }
+    const referralId = randomUUID5();
+    await db.insert(referralsTable).values({
+      referralId,
+      referrerId: referrer.playerId,
+      refereeId: referee.playerId,
+      referrerBonus: REFERRER_BONUS,
+      refereeBonus: REFEREE_BONUS
+    });
+    const refereeProfile = { ...referee.profileJson };
+    refereeProfile["chips"] = (Number(refereeProfile["chips"]) || 0) + REFEREE_BONUS;
+    await db.update(playersTable).set({ profileJson: refereeProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, referee.playerId));
+    const referrerProfile = { ...referrer.profileJson };
+    referrerProfile["chips"] = (Number(referrerProfile["chips"]) || 0) + REFERRER_BONUS;
+    await db.update(playersTable).set({ profileJson: referrerProfile, updatedAt: /* @__PURE__ */ new Date() }).where(eq(playersTable.playerId, referrer.playerId));
+    await db.insert(chipTransactionsTable).values([
+      {
+        txId: randomUUID5(),
+        playerId: referee.playerId,
+        type: "referral_bonus",
+        amount: REFEREE_BONUS,
+        balanceAfter: Number(refereeProfile["chips"]) || 0,
+        note: `Welcome bonus for using ${referrer.username}'s invite code`
+      },
+      {
+        txId: randomUUID5(),
+        playerId: referrer.playerId,
+        type: "referral_bonus",
+        amount: REFERRER_BONUS,
+        balanceAfter: Number(referrerProfile["chips"]) || 0,
+        note: `Referral bonus for inviting ${referee.username}`
+      }
+    ]);
+    req.log?.info({ referrerId: referrer.playerId, refereeId: referee.playerId }, "Referral claimed");
+    return res.json({
+      success: true,
+      refereeBonus: REFEREE_BONUS,
+      refereeProfile
+    });
+  } catch (err) {
+    req.log?.error({ err }, "referral claim failed");
+    return res.status(500).json({ error: "Server error while claiming referral." });
+  }
+});
+router6.get("/referrals/stats", async (req, res) => {
+  const { playerId } = req.query;
+  if (!playerId) return res.status(400).json({ error: "playerId query param required." });
+  try {
+    const rows = await db.select().from(referralsTable).where(eq(referralsTable.referrerId, playerId));
+    const totalBonus = rows.reduce((sum, r) => sum + r.referrerBonus, 0);
+    return res.json({ count: rows.length, totalBonus });
+  } catch (err) {
+    req.log?.error({ err }, "referral stats failed");
+    return res.status(500).json({ error: "Server error." });
+  }
+});
+var referrals_default = router6;
+
+// src/routes/index.ts
+var router7 = (0, import_express7.Router)();
+router7.use(health_default);
+router7.use(auth_default);
+router7.use(admin_default);
+router7.use(social_default);
+router7.use(bugs_default);
+router7.use(referrals_default);
+var routes_default = router7;
 
 // src/app.ts
-var app = (0, import_express7.default)();
+var app = (0, import_express8.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -68740,8 +68819,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express7.default.json());
-app.use(import_express7.default.urlencoded({ extended: true }));
+app.use(import_express8.default.json());
+app.use(import_express8.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 
