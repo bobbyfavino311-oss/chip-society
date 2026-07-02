@@ -66253,6 +66253,31 @@ function createDeck() {
   }
   return deck;
 }
+function createShortDeck() {
+  const suits = ["S", "H", "D", "C"];
+  const deck = [];
+  for (const suit of suits) {
+    for (let v = 6; v <= 14; v++) deck.push({ suit, value: v });
+  }
+  return deck;
+}
+function isJoker(card) {
+  return card.value === 0;
+}
+function createJokerDeck() {
+  const deck = createDeck();
+  deck.push({ suit: "S", value: 0 });
+  deck.push({ suit: "H", value: 0 });
+  return deck;
+}
+function createDeckForVariant(variant) {
+  if (variant === "short_deck_holdem") return createShortDeck();
+  if (variant === "joker_holdem") return createJokerDeck();
+  return createDeck();
+}
+function holeCardCountForVariant(variant) {
+  return variant === "omaha_holdem" ? 4 : 2;
+}
 function shuffleDeck(deck) {
   const d = [...deck];
   for (let i = d.length - 1; i > 0; i--) {
@@ -66324,6 +66349,133 @@ function getBestHand(holeCards, communityCards) {
         for (let l = k + 1; l < n - 1; l++)
           for (let m = l + 1; m < n; m++) {
             const r = evaluate5Cards([all[i], all[j], all[k], all[l], all[m]]);
+            if (!best || compareHands(r, best) > 0) best = r;
+          }
+  return best ?? { rank: 0, values: [], name: "High Card" };
+}
+function evaluate5CardsShortDeck(hand) {
+  const vals = hand.map((c) => c.value).sort((a, b) => b - a);
+  const suits = hand.map((c) => c.suit);
+  const counts = {};
+  for (const v of vals) counts[v] = (counts[v] || 0) + 1;
+  const countVals = Object.values(counts).sort((a, b) => b - a);
+  const uniqueVals = Object.keys(counts).map(Number).sort((a, b) => b - a);
+  const isFlush = suits.every((s) => s === suits[0]);
+  const isStraight = vals[0] - vals[4] === 4 && new Set(vals).size === 5;
+  const straightHigh = vals[0];
+  if (isFlush && isStraight) {
+    if (straightHigh === 14) return { rank: 9, values: [14], name: "Royal Flush" };
+    return { rank: 8, values: [straightHigh], name: "Straight Flush" };
+  }
+  if (countVals[0] === 4) {
+    const quad = uniqueVals.find((v) => counts[v] === 4);
+    const kick = uniqueVals.find((v) => counts[v] !== 4);
+    return { rank: 7, values: [quad, kick], name: "Four of a Kind" };
+  }
+  if (isFlush) return { rank: 6, values: vals, name: "Flush" };
+  if (countVals[0] === 3 && countVals[1] === 2) {
+    const trips = uniqueVals.find((v) => counts[v] === 3);
+    const pair = uniqueVals.find((v) => counts[v] === 2);
+    return { rank: 5, values: [trips, pair], name: "Full House" };
+  }
+  if (isStraight) return { rank: 4, values: [straightHigh], name: "Straight" };
+  if (countVals[0] === 3) {
+    const trips = uniqueVals.find((v) => counts[v] === 3);
+    const kickers = uniqueVals.filter((v) => counts[v] !== 3);
+    return { rank: 3, values: [trips, ...kickers], name: "Three of a Kind" };
+  }
+  if (countVals[0] === 2 && countVals[1] === 2) {
+    const pairs = uniqueVals.filter((v) => counts[v] === 2).sort((a, b) => b - a);
+    const kick = uniqueVals.find((v) => counts[v] === 1);
+    return { rank: 2, values: [...pairs, kick], name: "Two Pair" };
+  }
+  if (countVals[0] === 2) {
+    const pairVal = uniqueVals.find((v) => counts[v] === 2);
+    const kickers = uniqueVals.filter((v) => counts[v] !== 2);
+    return { rank: 1, values: [pairVal, ...kickers], name: "One Pair" };
+  }
+  return { rank: 0, values: vals, name: "High Card" };
+}
+function getBestHandOmaha(holeCards, communityCards) {
+  let best = null;
+  for (let hi = 0; hi < holeCards.length - 1; hi++) {
+    for (let hj = hi + 1; hj < holeCards.length; hj++) {
+      for (let ci = 0; ci < communityCards.length - 2; ci++) {
+        for (let cj = ci + 1; cj < communityCards.length - 1; cj++) {
+          for (let ck = cj + 1; ck < communityCards.length; ck++) {
+            const hand = [holeCards[hi], holeCards[hj], communityCards[ci], communityCards[cj], communityCards[ck]];
+            const result = evaluate5Cards(hand);
+            if (!best || compareHands(result, best) > 0) best = result;
+          }
+        }
+      }
+    }
+  }
+  return best ?? { rank: 0, values: [holeCards[0]?.value ?? 7], name: "High Card" };
+}
+function evaluate5CardsWild(hand) {
+  const allVals = hand.map((c) => c.value);
+  if (new Set(allVals).size === 1) {
+    return { rank: 10, values: [allVals[0]], name: "Five of a Kind" };
+  }
+  return evaluate5Cards(hand);
+}
+function getBestFrom(cards, evalFn) {
+  const n = cards.length;
+  let best = null;
+  for (let a = 0; a < n - 4; a++)
+    for (let b = a + 1; b < n - 3; b++)
+      for (let c = b + 1; c < n - 2; c++)
+        for (let d = c + 1; d < n - 1; d++)
+          for (let e = d + 1; e < n; e++) {
+            const r = evalFn([cards[a], cards[b], cards[c], cards[d], cards[e]]);
+            if (!best || compareHands(r, best) > 0) best = r;
+          }
+  return best ?? { rank: 0, values: [], name: "High Card" };
+}
+function getBestHandJoker(holeCards, communityCards) {
+  const all = [...holeCards, ...communityCards];
+  const jokerCount = all.filter(isJoker).length;
+  const natural = all.filter((c) => !isJoker(c));
+  if (jokerCount === 0) return getBestHand(holeCards, communityCards);
+  if (all.length < 5) return { rank: 0, values: [], name: "High Card" };
+  const SUITS = ["S", "H", "D", "C"];
+  const inHand = new Set(natural.map((c) => `${c.suit}${c.value}`));
+  const reps = [];
+  for (const suit of SUITS) {
+    for (let v = 2; v <= 14; v++) {
+      if (!inHand.has(`${suit}${v}`)) reps.push({ suit, value: v });
+    }
+  }
+  let best = null;
+  const updateBest = (r) => {
+    if (!best || compareHands(r, best) > 0) best = r;
+  };
+  const evalCards = (cards) => cards.length === 5 ? evaluate5CardsWild(cards) : getBestFrom(cards, evaluate5CardsWild);
+  if (jokerCount === 1) {
+    for (const r1 of reps) updateBest(evalCards([...natural, r1]));
+  } else {
+    for (let i = 0; i < reps.length; i++) {
+      for (let j = i + 1; j < reps.length; j++) {
+        updateBest(evalCards([...natural, reps[i], reps[j]]));
+      }
+    }
+  }
+  return best ?? { rank: 0, values: [], name: "High Card" };
+}
+function getBestHandForVariant(variant, holeCards, communityCards) {
+  if (variant === "joker_holdem") return getBestHandJoker(holeCards, communityCards);
+  if (variant === "omaha_holdem") return getBestHandOmaha(holeCards, communityCards);
+  const all = [...holeCards, ...communityCards];
+  const n = all.length;
+  const eval5 = variant === "short_deck_holdem" ? evaluate5CardsShortDeck : evaluate5Cards;
+  let best = null;
+  for (let i = 0; i < n - 4; i++)
+    for (let j = i + 1; j < n - 3; j++)
+      for (let k = j + 1; k < n - 2; k++)
+        for (let l = k + 1; l < n - 1; l++)
+          for (let m = l + 1; m < n; m++) {
+            const r = eval5([all[i], all[j], all[k], all[l], all[m]]);
             if (!best || compareHands(r, best) > 0) best = r;
           }
   return best ?? { rank: 0, values: [], name: "High Card" };
@@ -66752,7 +66904,7 @@ var PokerRoom = class {
       this.broadcastState();
       return;
     }
-    this.deck = shuffleDeck(createDeck());
+    this.deck = shuffleDeck(createDeckForVariant(this.config.variant));
     this.communityCards = [];
     this.pot = 0;
     this.currentBet = 0;
@@ -66772,8 +66924,11 @@ var PokerRoom = class {
       }
     }
     this.dealerSeat = this.nextActiveSeatFrom(this.dealerSeat === -1 ? 0 : this.dealerSeat, true);
+    const numHoleCards = holeCardCountForVariant(this.config.variant);
     for (const { s } of activePlayers) {
-      s.cards = [this.deck.pop(), this.deck.pop()];
+      const cards = [];
+      for (let n = 0; n < numHoleCards; n++) cards.push(this.deck.pop());
+      s.cards = cards;
     }
     const isHeadsUp = activePlayers.length === 2;
     const sbSeat = isHeadsUp ? this.dealerSeat : this.nextActiveSeatFrom(this.dealerSeat);
@@ -66971,7 +67126,7 @@ var PokerRoom = class {
         const evaluated = eligible.map((e) => ({
           idx: e.idx,
           seat: e.seat,
-          hand: getBestHand(e.seat.cards, this.communityCards)
+          hand: getBestHandForVariant(this.config.variant, e.seat.cards, this.communityCards)
         }));
         evaluated.sort((a, b) => compareHands(b.hand, a.hand));
         const best = evaluated[0].hand;
@@ -67135,7 +67290,8 @@ var PokerRoom = class {
       maxRaise,
       turnTimeoutAt: isMyTurn ? this.turnTimeoutAt : null,
       messages: this.messages,
-      winners: this.phase === "showdown" ? this.winners : void 0
+      winners: this.phase === "showdown" ? this.winners : void 0,
+      variant: this.config.variant
     };
   }
   getLobbyInfo() {
@@ -67147,7 +67303,8 @@ var PokerRoom = class {
       playerCount: this.playerCount,
       maxPlayers: this.config.maxPlayers,
       phase: this.phase,
-      minBuyIn: this.config.minBuyIn
+      minBuyIn: this.config.minBuyIn,
+      variant: this.config.variant
     };
   }
   broadcastState() {
@@ -67199,9 +67356,9 @@ var RoomManager = class {
     for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
     return this.rooms.has(code) ? this.generateCode() : code;
   }
-  createRoom(stakeTier, maxPlayers = 5) {
+  createRoom(stakeTier, maxPlayers = 5, variant = "texas_holdem") {
     const id = this.generateCode();
-    const config = { ...STAKE_CONFIG[stakeTier], maxPlayers };
+    const config = { ...STAKE_CONFIG[stakeTier], maxPlayers, variant };
     const room = new PokerRoom(id, config, this.emit, this.broadcast, this.onChipSync);
     this.rooms.set(id, room);
     return room;
@@ -67291,13 +67448,13 @@ var RoomManager = class {
     this.socketRoom.set(newSocketId, roomId);
     return room;
   }
-  findOrCreateRoom(stakeTier, maxPlayers) {
+  findOrCreateRoom(stakeTier, maxPlayers, variant = "texas_holdem") {
     for (const room of this.rooms.values()) {
-      if (room.config.stakeTier === stakeTier && room.config.maxPlayers === maxPlayers && room.playerCount < room.config.maxPlayers) {
+      if (room.config.stakeTier === stakeTier && room.config.maxPlayers === maxPlayers && room.config.variant === variant && room.playerCount < room.config.maxPlayers) {
         return room;
       }
     }
-    return this.createRoom(stakeTier, maxPlayers);
+    return this.createRoom(stakeTier, maxPlayers, variant);
   }
   /**
    * Fill empty seats with bots after a delay.
@@ -67373,6 +67530,15 @@ var logger = (0, import_pino.default)({
 });
 
 // src/sockets/index.ts
+var VALID_VARIANTS = /* @__PURE__ */ new Set([
+  "texas_holdem",
+  "short_deck_holdem",
+  "joker_holdem",
+  "omaha_holdem"
+]);
+function resolveVariant(v) {
+  return typeof v === "string" && VALID_VARIANTS.has(v) ? v : "texas_holdem";
+}
 var playerSockets = /* @__PURE__ */ new Map();
 var socketPlayers = /* @__PURE__ */ new Map();
 var _io = null;
@@ -67448,7 +67614,8 @@ function setupSocketIO(httpServer2) {
         const dbChips = await loadPlayerChips(payload.userId);
         const chips = dbChips !== null ? dbChips : payload.chips;
         const tier = payload.stakeTier;
-        const room = manager.createRoom(tier, payload.maxPlayers ?? 5);
+        const variant = resolveVariant(payload.variant);
+        const room = manager.createRoom(tier, payload.maxPlayers ?? 5, variant);
         const ok = manager.joinRoom(
           socket.id,
           room.id,
@@ -67516,7 +67683,8 @@ function setupSocketIO(httpServer2) {
           return;
         }
         const tier = payload.stakeTier;
-        const room = manager.findOrCreateRoom(tier, 5);
+        const variant = resolveVariant(payload.variant);
+        const room = manager.findOrCreateRoom(tier, 5, variant);
         const ok = manager.joinRoom(
           socket.id,
           room.id,
